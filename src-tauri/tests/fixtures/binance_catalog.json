@@ -1,0 +1,96 @@
+{
+  "timezone": "UTC",
+  "serverTime": 1700000000000,
+  "symbols": [
+    {
+      "symbol": "BTCUSDT",
+      "status": "TRADING",
+      "baseAsset": "BTC",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "ETHUSDT",
+      "status": "TRADING",
+      "baseAsset": "ETH",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "BTCUSDC",
+      "status": "TRADING",
+      "baseAsset": "BTC",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDC",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "SOLUSDT",
+      "status": "TRADING",
+      "baseAsset": "SOL",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "AVAXUSDT",
+      "status": "TRADING",
+      "baseAsset": "AVAX",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "DOGEUSDT",
+      "status": "TRADING",
+      "baseAsset": "DOGE",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "status": "TRADING",
+      "baseAsset": "1000PEPE",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "OLDCOINUSDT",
+      "status": "BREAK",
+      "baseAsset": "OLDCOIN",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    },
+    {
+      "symbol": "HALTEDUSDT",
+      "status": "HALT",
+      "baseAsset": "HALTED",
+      "baseAssetPrecision": 8,
+      "quoteAsset": "USDT",
+      "quotePrecision": 8,
+      "quoteAssetPrecision": 8,
+      "isSpotTradingAllowed": true
+    }
+  ]
+}

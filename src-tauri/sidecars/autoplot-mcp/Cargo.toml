@@ -1,0 +1,36 @@
+[package]
+name = "autoplot-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "Stdio MCP sidecar for the autoplot Tauri app — exposes read-only app tools to the Claude CLI."
+
+[[bin]]
+name = "autoplot-mcp"
+path = "src/main.rs"
+
+[dependencies]
+# MCP protocol — Anthropic's official Rust SDK.
+# Features: server (default) + transport-io (stdio) + schemars (JSON-schema gen) + macros.
+rmcp = { version = "1.6.0", features = ["server", "transport-io", "schemars", "macros"] }
+schemars = "0.8"
+
+# Async runtime.
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "macros", "sync", "time"] }
+
+# Serialization.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling.
+anyhow = "1"
+thiserror = "1"
+
+# Home/data-dir resolution — mirrors ipc_bridge.rs path helpers.
+dirs = "5"
+
+# UUID for JSON-RPC request ids.
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }

@@ -1,0 +1,1542 @@
+/* src/styles/panels.css — panel/FAB styles surviving chat-UI removal (2026-05-23). Was src/styles/agents.css. */
+
+/* =============================================================
+   Shared @keyframes used by surviving panel classes
+   ============================================================= */
+
+@keyframes agents-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+@keyframes trace-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* =============================================================
+   Aurora avatar — used by XtermPanel (.aurora-shell.size-large)
+   ============================================================= */
+
+.aurora-shell {
+  position: relative;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--bg-2);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.aurora-shell.size-tiny { width: 14px; height: 14px; border-width: 0; }
+.aurora-shell.size-small { width: 26px; height: 26px; }
+.aurora-shell.size-large { width: 36px; height: 36px; }
+
+.aurora {
+  position: absolute; inset: -30%;
+  background:
+    radial-gradient(circle at 30% 30%, oklch(0.82 0.16 215) 0%, transparent 55%),
+    radial-gradient(circle at 70% 70%, oklch(0.78 0.16 150) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, oklch(0.85 0.16 80) 0%, transparent 55%);
+  filter: blur(8px);
+  animation: aurora-spin 6s linear infinite;
+}
+.aurora.violet {
+  background:
+    radial-gradient(circle at 30% 30%, oklch(0.78 0.18 320) 0%, transparent 55%),
+    radial-gradient(circle at 70% 70%, oklch(0.82 0.14 260) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, oklch(0.85 0.14 215) 0%, transparent 55%);
+}
+.aurora.tiny { filter: blur(4px); }
+.aurora.breathing { animation-duration: 3s; }
+
+/* =============================================================
+   Settings panel (W2-A) — visual peer of agents-panel.
+   Fixed-frame removed — DockDrawer now owns framing (Step 9 dock port).
+   ============================================================= */
+
+.settings-tabstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 14px 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.settings-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              transform 150ms var(--ease),
+              box-shadow var(--t-fast) var(--ease);
+}
+.settings-tab:hover { color: var(--ink-0); }
+.settings-tab:active { transform: scale(0.97); }
+.settings-tab:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
+    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}
+.settings-tab.active {
+  color: var(--ink-0);
+  background: var(--glass);
+  border-color: var(--hairline);
+}
+
+.settings-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 16px 14px 20px;
+  display: flex; flex-direction: column;
+  gap: 18px;
+}
+.settings-body::-webkit-scrollbar { width: 6px; }
+.settings-body::-webkit-scrollbar-thumb { background: var(--hairline-2); border-radius: 3px; }
+
+.settings-section {
+  display: flex; flex-direction: column;
+  gap: 8px;
+}
+.settings-section-title {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+.settings-row {
+  display: flex; flex-direction: column;
+  gap: 5px;
+}
+.settings-row-inline {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+}
+.settings-row label {
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.settings-row-hint {
+  font-size: 11px;
+  color: var(--ink-3);
+  line-height: 1.45;
+}
+.settings-row input[type="text"],
+.settings-row input[type="number"] {
+  appearance: none;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--ink-0);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  border-radius: 10px;
+  padding: 7px 10px;
+  outline: 0;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.settings-row input[type="text"]:focus,
+.settings-row input[type="number"]:focus {
+  border-color: oklch(0.82 0.14 215 / 0.45);
+  box-shadow: 0 0 0 3px oklch(0.82 0.14 215 / 0.10);
+}
+
+.settings-row select {
+  appearance: none;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--ink-0);
+  font-size: 12px;
+  border-radius: 10px;
+  padding: 6px 28px 6px 10px;
+  cursor: pointer;
+}
+
+.settings-btn {
+  appearance: none;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--ink-1);
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.settings-btn:hover:not(:disabled) {
+  color: var(--ink-0);
+  border-color: var(--hairline-2);
+  background: var(--glass-strong);
+}
+.settings-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.settings-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+.settings-status .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-3);
+}
+.settings-status.ok .dot { background: var(--up); box-shadow: 0 0 6px var(--up); }
+.settings-status.err .dot { background: var(--down); box-shadow: 0 0 6px var(--down); }
+
+.settings-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.settings-toggle input { accent-color: var(--accent); }
+
+/* Tool chips */
+.settings-chips {
+  display: flex; flex-wrap: wrap;
+  gap: 5px;
+}
+.settings-chip {
+  appearance: none;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--ink-2);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.settings-chip:hover { color: var(--ink-0); border-color: var(--hairline-2); }
+.settings-chip.on {
+  color: var(--ink-0);
+  background: color-mix(in oklab, oklch(0.82 0.14 215) 14%, transparent);
+  border-color: color-mix(in oklab, oklch(0.82 0.14 215) 35%, transparent);
+}
+
+.settings-cols-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.settings-stub {
+  border: 1px dashed var(--hairline);
+  border-radius: 14px;
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.settings-stub strong {
+  display: block;
+  color: var(--ink-1);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* =============================================================
+   FirstRun gate (W2-A) — centered overlay modal.
+   ============================================================= */
+
+.firstrun-overlay {
+  position: fixed; inset: 0;
+  background: color-mix(in oklab, var(--bg-0) 65%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  animation: agents-in 280ms var(--ease);
+}
+.firstrun-card {
+  width: 420px;
+  max-width: calc(100vw - 36px);
+  border-radius: 22px;
+  border: 1px solid var(--hairline);
+  background:
+    radial-gradient(120% 80% at 100% 0%, oklch(0.82 0.14 215 / 0.10), transparent 60%),
+    radial-gradient(120% 80% at 0% 100%, oklch(0.78 0.18 320 / 0.08), transparent 60%),
+    color-mix(in oklab, var(--bg-1) 90%, transparent);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  box-shadow: var(--shadow-glass);
+  padding: 22px 22px 18px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.firstrun-title {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink-0);
+}
+.firstrun-body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.firstrun-body a { color: var(--accent); }
+.firstrun-actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+
+
+/* =============================================================
+   Wave-2 list rows (MCP / Skills / Subagents).
+   ============================================================= */
+
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.settings-list-row.shadowed { opacity: 0.45; }
+.settings-list-name {
+  font-weight: 500;
+  color: var(--ink-0);
+}
+.settings-list-desc {
+  color: var(--ink-2);
+  font-size: 11px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-status.unknown .dot { background: var(--ink-3); }
+
+/* =============================================================
+   Bypass dialog (W2-D2 / W2-D3) — FirstRun bypass flow.
+   ============================================================= */
+
+.bypass-dialog-overlay {
+  position: fixed; inset: 0;
+  background: color-mix(in oklab, var(--bg-0) 65%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+}
+.bypass-dialog {
+  width: 380px;
+  padding: 20px;
+  background: var(--bg-1);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  font-size: 13px;
+  color: var(--ink-1);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.bypass-dialog h3 { margin: 0; font-size: 14px; color: var(--ink-0); }
+.bypass-dialog .bypass-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.bypass-dialog button {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 6px 12px;
+  color: var(--ink-1);
+  font-size: 12px;
+  cursor: pointer;
+}
+.bypass-dialog button.primary { color: var(--ink-0); border-color: var(--ink-1); }
+
+/* =============================================================
+   MCP add/edit form (W2-B follow-up) — used by SettingsPanel.tsx
+   ============================================================= */
+
+.mcp-form {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: background var(--ease);
+}
+.mcp-form.open {
+  background: color-mix(in oklab, var(--ink-0) 3%, transparent);
+}
+.mcp-form-toggle {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--ink-1);
+  padding: 10px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.mcp-form-toggle:hover {
+  background: color-mix(in oklab, var(--ink-0) 4%, transparent);
+}
+.mcp-form-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+.mcp-form-body {
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--hairline);
+}
+.mcp-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mcp-form-row label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.mcp-form-row input,
+.mcp-form-row select,
+.mcp-form-row textarea {
+  background: color-mix(in oklab, var(--ink-0) 3%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--ink-0);
+}
+.mcp-form-row textarea { resize: vertical; }
+.mcp-form-error {
+  font-size: 11px;
+  color: var(--down);
+  padding: 4px 0;
+}
+.mcp-form-link {
+  background: transparent;
+  border: none;
+  color: var(--ink-0);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+.mcp-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mcp-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mcp-row-confirm {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.mcp-row-age {
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+.settings-btn.ghost {
+  background: transparent;
+}
+.settings-btn.danger {
+  border-color: color-mix(in oklab, var(--down) 60%, var(--hairline));
+  color: var(--down);
+}
+
+/* =============================================================
+   MCP unavailable banner (W2-B follow-up) — used by SettingsPanel.tsx
+   ============================================================= */
+
+.mcp-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklab, var(--down) 50%, var(--hairline));
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--ink-1);
+}
+.mcp-banner .dot {
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  background: var(--down);
+}
+.mcp-banner-text { flex: 1; }
+.mcp-banner-text strong { color: var(--ink-0); }
+.mcp-banner-x {
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.mcp-banner-x:hover { color: var(--ink-0); }
+
+/* ---------------------------------------------------------------------------
+ * P6 W4-B — Dataset cards + strategy cards
+ * DatasetCard.tsx, StrategyCard.tsx
+ * ------------------------------------------------------------------------- */
+
+/* Result cards (DatasetCard inline). */
+.ds-card {
+  --ds-color: var(--accent);
+  margin-top: 8px;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  animation: msg-in 320ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  transition: border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              box-shadow var(--t-fast) var(--ease);
+}
+.ds-card:hover {
+  border-color: color-mix(in oklab, white 12%, var(--hairline));
+  background: color-mix(in oklab, white 4%, var(--glass));
+  box-shadow: 0 4px 16px -8px oklch(0.10 0.02 250 / 0.6);
+}
+.ds-swatch {
+  width: 8px;
+  align-self: stretch;
+  height: auto;
+  min-height: 28px;
+  border-radius: 4px;
+  background: var(--ds-color);
+  box-shadow: 0 0 14px -2px var(--ds-color);
+  flex: 0 0 auto;
+}
+.ds-textcol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+}
+.ds-label {
+  color: var(--ink-0);
+  font-size: 12.5px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+.ds-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  flex: 0 0 auto;
+}
+.ds-toggle {
+  appearance: none;
+  border: 1px solid var(--hairline-2);
+  background: transparent;
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              transform 150ms var(--ease),
+              box-shadow var(--t-fast) var(--ease);
+  flex: 0 0 auto;
+  align-self: center;
+}
+.ds-toggle:hover {
+  color: var(--ink-0);
+  border-color: color-mix(in oklab, white 22%, transparent);
+}
+.ds-toggle:active { transform: scale(0.97); }
+.ds-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
+    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}
+.ds-toggle.on {
+  color: var(--bg-0);
+  background: var(--ink-0);
+  border-color: var(--ink-0);
+}
+.ds-toggle.applied {
+  color: var(--bg-0);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* lib-rm — DatasetCard delete button (used standalone, not wrapped in .ag-library). */
+.lib-rm {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  align-self: center;
+  transition: color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              transform 150ms var(--ease);
+}
+.lib-rm:hover {
+  color: var(--ink-0);
+  background: var(--glass);
+}
+.lib-rm:active { transform: scale(0.93); }
+.lib-rm:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
+    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}
+.lib-rm.arming {
+  width: auto;
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--down);
+  border: 1px solid var(--down);
+  background: color-mix(in oklab, var(--down) 14%, transparent);
+}
+
+/* lib-row — Research Library row that pairs a reused DatasetCard (.ds-card,
+   which owns its own margin-top) with a standalone library-delete button.
+   The card flexes to fill; the × sits beside it, vertically centered. */
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.lib-row > .ds-card {
+  flex: 1;
+  min-width: 0;
+}
+
+/* lib-empty — shown when the Research Library has no saved overlays. */
+.lib-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px 24px;
+  text-align: center;
+  animation: msg-in 300ms var(--ease) both;
+}
+.lib-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, white 3%, transparent);
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+  font-size: 20px;
+}
+.lib-empty-heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+  line-height: 1.4;
+}
+.lib-empty-helper {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  line-height: 1.55;
+  max-width: 240px;
+}
+
+
+/* =========================================================================
+ * Step 8 — Legend HUD (src/chrome/LegendHUD.tsx)
+ * TradingView-style transparent legend, top-left under the Headline.
+ * NO panel chrome — no border, no background, no blur, no box-shadow.
+ * Overlap is a non-issue because there is no panel surface.
+ * One row per active overlay across every family + a collapsed chip form.
+ * ========================================================================= */
+.legend-hud,
+.legend-hud-pill-wrap {
+  position: fixed;
+  /* Classic TradingView spot: top-left under the Headline.
+     Headline sits at top: var(--sp-22); 92px clears the two-line readout. */
+  top: calc(var(--sp-22) + 92px);
+  left: calc(var(--chart-left-edge) + var(--sp-22));
+  z-index: 13;
+  pointer-events: none;
+}
+.legend-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 300px;
+  /* No panel chrome — fully transparent at rest. */
+  padding: 0;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  pointer-events: auto;
+}
+.legend-hud-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px var(--sp-6) 4px;
+}
+.legend-hud-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+  text-shadow: 0 1px 2px oklch(0.11 0.008 260 / 0.8);
+}
+/* Collapse button — transparent at rest, revealed on legend hover / focus-within. */
+.legend-hud-head .legend-hud-collapse {
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.legend-hud:hover .legend-hud-head .legend-hud-collapse,
+.legend-hud:focus-within .legend-hud-head .legend-hud-collapse {
+  opacity: 1;
+}
+.legend-hud-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: 3px var(--sp-6);
+  border-radius: var(--r-8);
+  /* Transparent at rest; faint glass tint on hover so the row reads interactive. */
+  background: transparent;
+  transition: background var(--t-fast) var(--ease);
+  pointer-events: auto;
+}
+.legend-hud-row:hover { background: var(--glass); }
+/* A hidden row dims the label — visible=false controls opacity on the whole row
+   so scanning remains possible but the overlay is clearly off. */
+.legend-hud-row[data-hidden='true'] .legend-hud-label { color: var(--ink-3); }
+.legend-hud-dot {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ov-color);
+  /* Glow aids scanability — matches renderer dot color */
+  box-shadow: 0 0 10px var(--ov-color);
+  flex: 0 0 auto;
+}
+.legend-hud-label {
+  flex: 1;
+  min-width: 0;
+  /* ink-1 at rest (subtler than ink-0, readable over candles). */
+  color: var(--ink-1);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Text shadow for candle-overlap readability. */
+  text-shadow: 0 1px 2px oklch(0.11 0.008 260 / 0.8);
+}
+.legend-hud-desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  flex: 0 0 auto;
+  text-shadow: 0 1px 2px oklch(0.11 0.008 260 / 0.8);
+}
+/* Eye + clear + collapse controls — hidden at rest, shown on row hover / focus-within.
+   They stay in the layout (no display:none) so Tab can still reach them. */
+.legend-hud-eye,
+.legend-hud-rm {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  /* Hidden at rest; revealed on row hover or focus-within (keyboard a11y). */
+  opacity: 0;
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+    opacity var(--t-fast) var(--ease);
+}
+.legend-hud-collapse {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+    opacity var(--t-fast) var(--ease);
+}
+.legend-hud-eye { width: 22px; height: 22px; }
+.legend-hud-rm { width: 22px; height: 22px; font-size: 14px; line-height: 1; }
+.legend-hud-collapse { width: 20px; height: 20px; }
+/* Reveal controls on row hover + focus-within (keyboard) */
+.legend-hud-row:hover .legend-hud-eye,
+.legend-hud-row:hover .legend-hud-rm,
+.legend-hud-row:focus-within .legend-hud-eye,
+.legend-hud-row:focus-within .legend-hud-rm {
+  opacity: 1;
+}
+.legend-hud-eye:hover,
+.legend-hud-rm:hover,
+.legend-hud-collapse:hover { color: var(--ink-0); background: var(--glass); }
+/* Pressed eye (overlay visible) reads as the active ink. */
+.legend-hud-eye[aria-pressed='true'] { color: var(--ink-1); }
+
+/* Collapsed form — a minimal transparent chip that opens the IndicatorPanel. */
+.legend-hud-pill-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.legend-hud-pill {
+  pointer-events: auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  /* Minimal chip: hairline border only, no background blur. */
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.legend-hud-pill:hover { color: var(--ink-1); background: var(--glass); }
+.legend-hud-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  background: var(--glass-strong);
+  border-radius: var(--r-pill);
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+.legend-hud-pill-wrap .legend-hud-collapse {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* Reduced motion — opacity transitions are fine; no new transforms added. */
+@media (prefers-reduced-motion: reduce) {
+  .legend-hud-eye,
+  .legend-hud-rm,
+  .legend-hud-collapse { transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+}
+
+/* Mobile fall-back: tuck the legend tighter under the smaller compact Headline. */
+@media (max-width: 720px) {
+  .legend-hud,
+  .legend-hud-pill-wrap { top: calc(var(--sp-22) + 78px); }
+}
+
+/* =========================================================================
+ * W5-C12 — StrategyCard + RuleGraph + signals chip
+ * StrategyCard.tsx, RuleGraph.tsx
+ * ========================================================================= */
+
+/* StrategyCard — thesis blurb */
+.strat-thesis {
+  margin: 4px 0 8px 0;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+/* Indicative perf state — subdue numeric tone. */
+.strat-perf-indicative span {
+  color: var(--ink-3);
+}
+.strat-perf-indicative span i {
+  color: var(--ink-3);
+}
+.strat-perf-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline-2);
+  background: var(--glass);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.strat-perf-empty-msg {
+  font-style: italic;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* Loading shimmer — replaces the perf row while the backtest runs. */
+.strat-perf-shimmer {
+  display: inline-block;
+  width: 140px;
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--glass) 0%,
+    var(--glass-strong) 50%,
+    var(--glass) 100%
+  );
+  background-size: 200% 100%;
+  animation: stratShimmer 1.4s linear infinite;
+}
+@keyframes stratShimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* Footnote — subtle, with hairline above. */
+.strat-footnote {
+  margin: 8px 0 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--hairline);
+  color: var(--ink-3);
+  font-size: 10px;
+  font-style: italic;
+}
+
+/* Plan-outline primary Apply CTA — StrategyCard footer. */
+.strat-card-footer-cta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.strat-apply-primary {
+  appearance: none;
+  border: 1px solid var(--ink-0);
+  background: var(--ink-0);
+  color: var(--bg-0);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+}
+.strat-apply-primary:hover {
+  transform: translateY(-1px);
+}
+.strat-apply-primary:active {
+  transform: translateY(0);
+  opacity: 0.92;
+}
+
+/* RuleGraph — AND-pills inside each node body. */
+.rule-graph-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 1px;
+}
+.rule-graph-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ds-badge — stopped/incomplete inline badge (StrategyCard.tsx). */
+.ds-badge.stopped {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  vertical-align: middle;
+  animation: msg-in 280ms var(--ease) backwards;
+}
+
+.ds-badge.incomplete {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--down);
+  border: 1px solid color-mix(in oklab, var(--down) 50%, transparent);
+  border-radius: 4px;
+  vertical-align: middle;
+  animation: msg-in 280ms var(--ease) backwards;
+}
+
+/* tc-status — ToolCallCard status chip (if any surviving component renders it). */
+.tc-status {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tc-status.live {
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  position: relative;
+  overflow: hidden;
+}
+.tc-status.live::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--accent) 20%, transparent) 50%,
+    transparent 100%
+  );
+  animation: trace-shimmer 1.6s linear infinite;
+  pointer-events: none;
+}
+.tc-status.done {
+  color: var(--ink-1);
+  border: 1px solid var(--hairline);
+}
+.tc-status.error {
+  color: var(--down);
+  border: 1px solid color-mix(in oklab, var(--down) 30%, transparent);
+}
+
+/* =============================================================
+   Step 12 — Terminal Panel
+   The Terminal drawer is toggled by the right activity-bar rail
+   (src/chrome/ActivityBar.tsx); its open-state lives in useDockStore.
+   ============================================================= */
+
+/* --- Terminal Panel --- */
+/* .terminal-panel fixed-float removed — DockDrawer owns framing (Step 12 dock port). */
+/* .terminal-panel-head / -title / -name / -close removed — PanelHeader owns chrome (C1 cleanup). */
+
+.terminal-panel-sub {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.terminal-panel-body {
+  flex: 1 1 0;
+  overflow: hidden;
+  padding: 8px;
+}
+
+/* --- Terminal session-start overlay (Step 11) ---
+   Glass scrim over the xterm container from spawn until the first PTY
+   data frame, then dissolves over --t-fast (≈180ms; spec asks 240ms —
+   we drive the exact 240ms duration inline since there is no 240ms token).
+   The host (.terminal-start-host) is the positioning context; the xterm
+   container fills it underneath. */
+.terminal-start-host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.terminal-start-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-16);
+  padding: var(--sp-22);
+  border-radius: var(--r-12);
+  /* Glass scrim — bg-1 mix so the (mostly empty) terminal reads through. */
+  background: color-mix(in oklab, var(--bg-1) 72%, transparent);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  /* Dissolve: opacity + a slight blur lift. Driven by the data-dissolving
+     attribute; 240ms per spec. */
+  opacity: 1;
+  transition: opacity 240ms var(--ease), filter 240ms var(--ease);
+}
+.terminal-start-overlay[data-dissolving='true'] {
+  opacity: 0;
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Aurora avatar — reuses the shared .aurora-shell / .aurora vocabulary. */
+.terminal-start-avatar {
+  display: grid;
+  place-items: center;
+}
+
+/* Shimmer status text — mirrors the trace-shimmer sweep over the label. */
+.terminal-start-status {
+  position: relative;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--ink-1);
+  background: linear-gradient(
+    100deg,
+    var(--ink-2) 30%,
+    var(--ink-0) 50%,
+    var(--ink-2) 70%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: trace-shimmer 1.6s linear infinite;
+}
+
+/* "Try asking" hint card — dismissible glass card listing 3 prompts. */
+.terminal-start-hint {
+  width: min(360px, 100%);
+  padding: var(--sp-12) var(--sp-16);
+  border-radius: var(--r-14);
+}
+.terminal-start-hint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-8);
+}
+.terminal-start-hint-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.terminal-start-hint-dismiss {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-8);
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.terminal-start-hint-dismiss:hover {
+  color: var(--ink-0);
+}
+.terminal-start-hint-dismiss:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 10%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+.terminal-start-hint-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.terminal-start-hint-item {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-1);
+  padding-left: var(--sp-12);
+  position: relative;
+}
+.terminal-start-hint-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+/* --- Terminal exit / restart bar (Step 11) ---
+   Glass bottom bar shown when the PTY session has exited. Sits above the
+   terminal body via flex order in TerminalPanel. */
+.terminal-exit-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-12);
+  margin: 0 var(--sp-8) var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
+  border-radius: var(--r-12);
+  animation: agents-in var(--t-med) var(--ease) backwards;
+}
+.terminal-exit-msg {
+  font-size: 12px;
+  color: var(--ink-1);
+}
+.terminal-exit-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--down);
+  margin-left: var(--sp-6);
+}
+.terminal-restart-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--ink-0);
+  padding: var(--sp-6) var(--sp-12);
+  border-radius: var(--r-8);
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline-2);
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+.terminal-restart-btn:hover {
+  color: var(--accent);
+  transform: scale(1.03);
+  box-shadow: 0 0 16px -4px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.terminal-restart-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 10%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+/* --- Strategy Artifact Panel (Step 11b) --- */
+/* .artifact-panel fixed-frame removed — DockDrawer owns framing (Step 11b dock port). */
+/* @keyframes artifact-in removed — no longer referenced. */
+/* .artifact-panel-head / -title / -name / -close removed — PanelHeader owns chrome (C1 cleanup). */
+/* .artifact-panel-strategy and .artifact-panel-rev kept — passed via PanelHeader children slot. */
+
+.artifact-panel-strategy {
+  font-size: 11px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.artifact-panel-rev {
+  font-size: 10px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--ink-2) 12%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+.artifact-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--hairline);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.artifact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--bg-1) 60%, transparent);
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+}
+.artifact-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ink-0) 8%, transparent);
+  color: var(--ink-0);
+  border-color: color-mix(in oklab, var(--ink-0) 20%, transparent);
+}
+.artifact-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.artifact-btn.primary {
+  background: color-mix(in oklab, var(--accent, oklch(0.75 0.18 215)) 15%, transparent);
+  border-color: color-mix(in oklab, var(--accent, oklch(0.75 0.18 215)) 35%, transparent);
+  color: oklch(0.82 0.14 215);
+}
+.artifact-btn.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent, oklch(0.75 0.18 215)) 22%, transparent);
+}
+
+.artifact-panel-body {
+  flex: 1 1 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.artifact-editor-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+
+/* CodeMirror editor reset — match the glass surface. */
+.artifact-editor-wrap .cm-editor {
+  height: 100%;
+  background: transparent;
+  font-family: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  font-size: 12px;
+}
+.artifact-editor-wrap .cm-scroller {
+  overflow: auto;
+}
+.artifact-editor-wrap .cm-focused { outline: none; }
+
+.artifact-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--hairline);
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--ink-2);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  overflow: hidden;
+}
+
+.artifact-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artifact-status-ok { color: var(--up); }
+.artifact-status-err { color: var(--down); }
+
+.artifact-panel-error {
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--down);
+  border-top: 1px solid var(--hairline);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  word-break: break-all;
+  flex-shrink: 0;
+}
+
+/* Loading spinner */
+.artifact-spinner {
+  width: 10px; height: 10px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: artifact-spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes artifact-spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* =============================================================
+   Reduced-motion overrides for surviving panel classes.
+   ============================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Artifact panel child elements */
+  .artifact-btn { transition: none; }
+  .artifact-spinner { animation: none; }
+
+  /* FirstRun / bypass overlay */
+  .firstrun-overlay { animation: none; }
+
+  .aurora { animation: none; }
+
+  /* ds-badge animations */
+  .ds-badge.stopped { animation: none; }
+  .ds-badge.incomplete { animation: none; }
+
+  /* tc-status shimmer */
+  .tc-status.live::before { animation: none; }
+
+  /* strat shimmer */
+  .strat-perf-shimmer { animation: none; }
+
+  /* Terminal start overlay — no shimmer/spin/dissolve. Static text, instant
+     hide (the .aurora rule above already kills the avatar spin). */
+  .terminal-start-status {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: var(--ink-1);
+    color: var(--ink-1);
+  }
+  .terminal-start-overlay { transition: none; }
+  .terminal-exit-bar { animation: none; }
+
+  /* ds-card stagger + hover shadow; scale-press states on toggle/rm/settings-tab. */
+  .ds-card {
+    animation-delay: 0ms;
+  }
+  .ds-toggle:active,
+  .lib-rm:active,
+  .settings-tab:active { transform: none; }
+  .lib-empty { animation: none; }
+}
+
+/* =============================================================
+   Canonical docked-panel header — PanelHeader.tsx (S4).
+
+   Shared header adopted by all six dock panels (C1 cleanup complete).
+   Replaces the former inline-styled AssetPanel/PortfolioPanel headers,
+   Indicator's .x-btn, Settings' .ag-head*, and the bespoke
+   .artifact-panel-head / .terminal-panel-head trees (all deleted).
+   All values token-driven — no hardcoded rgba/hex. Mono-font uses the
+   var(--font-mono, …) fallback form. The accent focus ring mirrors
+   .dock-btn:focus-visible in motion.css.
+   ============================================================= */
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-12);
+  border-bottom: 1px solid var(--hairline);
+  flex-shrink: 0;            /* never collapses when the body scrolls */
+  /* no own background — reads as part of the drawer's glass surface */
+}
+
+.panel-head-label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.panel-head-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-left: auto;          /* pushes slot + close to the right */
+  min-width: 0;               /* lets long strategy names ellipsize */
+  color: var(--ink-2);
+  font-size: 11px;
+}
+
+.panel-head-close {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-left: auto;          /* right-aligns when no slot present */
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-8);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+.panel-head-slot + .panel-head-close { margin-left: 0; }
+
+.panel-head-close:hover {
+  color: var(--ink-0);
+  background: var(--glass);
+}
+
+.panel-head-close:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
+    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}

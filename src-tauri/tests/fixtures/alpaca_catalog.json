@@ -1,0 +1,86 @@
+[
+  {
+    "id": "8ccae427-5dd0-45b3-b5fe-7ba5e422c766",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "AAPL",
+    "name": "Apple Inc. Common Stock",
+    "status": "active",
+    "tradable": true,
+    "marginable": true,
+    "shortable": true,
+    "fractionable": true
+  },
+  {
+    "id": "id-msft",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "MSFT",
+    "name": "Microsoft Corporation Common Stock",
+    "status": "active",
+    "tradable": true,
+    "marginable": true,
+    "shortable": true,
+    "fractionable": true
+  },
+  {
+    "id": "id-nvda",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation Common Stock",
+    "status": "active",
+    "tradable": true,
+    "marginable": true,
+    "shortable": true,
+    "fractionable": true
+  },
+  {
+    "id": "id-spy",
+    "class": "us_equity",
+    "exchange": "ARCA",
+    "symbol": "SPY",
+    "name": "SPDR S&P 500 ETF Trust",
+    "status": "active",
+    "tradable": true,
+    "marginable": true,
+    "shortable": true,
+    "fractionable": true
+  },
+  {
+    "id": "id-inactive",
+    "class": "us_equity",
+    "exchange": "NASDAQ",
+    "symbol": "OLD",
+    "name": "Old Delisted Stock",
+    "status": "inactive",
+    "tradable": false,
+    "marginable": false,
+    "shortable": false,
+    "fractionable": false
+  },
+  {
+    "id": "id-not-tradable",
+    "class": "us_equity",
+    "exchange": "NYSE",
+    "symbol": "HALTED",
+    "name": "Trading Halted Stock",
+    "status": "active",
+    "tradable": false,
+    "marginable": false,
+    "shortable": false,
+    "fractionable": false
+  },
+  {
+    "id": "id-crypto",
+    "class": "crypto",
+    "exchange": "CRYPTO",
+    "symbol": "BTCUSD",
+    "name": "Bitcoin / US Dollar",
+    "status": "active",
+    "tradable": true,
+    "marginable": false,
+    "shortable": false,
+    "fractionable": true
+  }
+]

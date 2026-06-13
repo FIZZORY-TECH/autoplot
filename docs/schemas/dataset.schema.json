@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoplot.local/schemas/dataset.schema.json",
+  "title": "Dataset",
+  "description": "Terminal payload returned by the model's return_dataset tool. Mirror of src/ai/schemas.ts:Dataset (Wave 4 / W4-A). Enums are pinned; AND-only conditions; Tf is locked to '1h' | '4h' | '1d' | '1w' per Architectural Decision A3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "label", "kind", "align", "sym", "tf", "values"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "label": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["overlay", "series"] },
+    "align": {
+      "enum": ["right", "index"],
+      "description": "'right' = right-anchored: values[length-1] aligns to the last visible bar; consumer pads left with null. 'index' = positional: values.length === visibleBars and values[i] aligns to bar i."
+    },
+    "sym": { "type": "string", "minLength": 1 },
+    "tf": { "enum": ["1h", "4h", "1d", "1w"] },
+    "conditions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Condition" }
+    },
+    "values": {
+      "type": "array",
+      "items": { "type": ["number", "null"] }
+    },
+    "notes": { "type": "string" }
+  },
+  "definitions": {
+    "Indicator": {
+      "enum": [
+        "close",
+        "open",
+        "high",
+        "low",
+        "volume",
+        "sma",
+        "ema",
+        "rsi",
+        "atr",
+        "bollinger_upper",
+        "bollinger_middle",
+        "bollinger_lower",
+        "donchian_high",
+        "donchian_low",
+        "realized_vol"
+      ]
+    },
+    "Op": {
+      "enum": ["<", ">", "<=", ">=", "==", "crossesAbove", "crossesBelow"]
+    },
+    "IndicatorRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "$ref": "#/definitions/Indicator" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "Condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["left", "op", "value"],
+      "properties": {
+        "left": { "$ref": "#/definitions/IndicatorRef" },
+        "op": { "$ref": "#/definitions/Op" },
+        "value": {
+          "oneOf": [
+            { "type": "number" },
+            { "$ref": "#/definitions/IndicatorRef" }
+          ]
+        }
+      }
+    }
+  }
+}

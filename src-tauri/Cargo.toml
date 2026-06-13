@@ -1,0 +1,61 @@
+[package]
+name = "autoplot"
+version = "0.1.0"
+description = "autoplot — Tauri trading research workspace"
+authors = ["FIZZORY-TECH"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "autoplot_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+tokio = { version = "1", features = ["full"] }
+# P4.1 — REST client (rustls so we don't pull OpenSSL); JSON parsing kept direct;
+# async-trait for the MarketDataProvider Rust trait; thiserror for typed errors.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+async-trait = "0.1"
+thiserror = "1"
+# P5 W1-A — cross-platform home/data-dir resolution + UUID for jail-dir names.
+dirs = "5"
+uuid = { version = "1", features = ["v4"] }
+base64 = "0.22"
+# P5 W2-G — Rust mirror of `src/ai/pii.ts` for the verbose CLI on-disk log.
+# Caching of compiled patterns uses std `OnceLock` (Rust ≥1.70) — no extra deps.
+regex = "1"
+# Step 4 — IPC bridge: OS CSPRNG for token generation; error propagation.
+getrandom = "0.2"
+anyhow = "1"
+# Step 8 — PTY terminal mode: cross-platform pseudo-terminal with native ConPTY on Windows.
+portable-pty = "0.9"
+# Step 3 (equities) — provider API keys are stored in a portable plaintext
+# JSON file at `data_root()/credentials.json` (see src/commands/credentials.rs).
+# No OS keychain, no encryption, no extra dependency — serde_json (above) does it.
+
+[dev-dependencies]
+tempfile = "3"
+
+# ---------------------------------------------------------------------------
+# Workspace — declares the sidecar crate as a workspace member so
+# `cargo build --workspace` builds both the main Tauri lib/bin AND the MCP
+# sidecar binary.  The "." member is the root crate itself (this file).
+# ---------------------------------------------------------------------------
+[workspace]
+members = [
+    ".",
+    "sidecars/autoplot-mcp",
+]
+resolver = "2"

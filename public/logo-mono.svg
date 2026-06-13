@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Investment Pod" color="currentColor">
+  <!-- Mono variant: same 6-layer slab-industrial overflow geometry as
+       logo-mark.svg, currentColor only with tuned opacities so the mark
+       reads on any colored background. -->
+  <defs>
+    <clipPath id="plate-mono">
+      <rect x="2" y="2" width="60" height="60" rx="14" ry="14" />
+    </clipPath>
+  </defs>
+
+  <!-- Plate base -->
+  <rect x="2" y="2" width="60" height="60" rx="14" ry="14"
+        fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Oversized monogram, clipped to plate -->
+  <g fill="currentColor" clip-path="url(#plate-mono)">
+    <rect x="14" y="4" width="10" height="52" />
+    <rect x="12" y="56" width="14" height="4" />
+    <path fill-rule="evenodd" d="
+      M 14 4
+      L 53 4
+      L 58 9
+      L 58 36
+      L 14 36
+      Z
+      M 24 10
+      L 50 10
+      L 50 30
+      L 24 30
+      Z
+    " />
+  </g>
+
+  <!-- Plate hairline ring -->
+  <rect x="2" y="2" width="60" height="60" rx="14" ry="14"
+        fill="none" stroke="currentColor" stroke-opacity="0.55" stroke-width="1" />
+  <!-- Cyan inset glow ring (currentColor stand-in) -->
+  <rect x="3.5" y="3.5" width="57" height="57" rx="12.5" ry="12.5"
+        fill="none" stroke="currentColor" stroke-opacity="0.20" stroke-width="0.5" />
+
+  <!-- Focal node: outer halo + mid + core -->
+  <circle cx="24" cy="10" r="4" fill="currentColor" fill-opacity="0.14" />
+  <circle cx="24" cy="10" r="2.5" fill="currentColor" fill-opacity="0.30" />
+  <circle cx="24" cy="10" r="1.5" fill="currentColor" />
+</svg>

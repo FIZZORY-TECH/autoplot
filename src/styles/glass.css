@@ -1,0 +1,53 @@
+/* =============================================================
+   autoplot — Glass Utilities
+   Source: app-design/project/Design System.html §03 Form
+   (shadow-glass) + §04 Components (.glass-card, .action-btn,
+   .mark-composer). Inset white-10% top highlight + ring +
+   30/60 black drop, paired with backdrop-filter blur 20–40px
+   saturate 140–180%.
+   ============================================================= */
+
+/* Base glass — light tint, used for chips, dock cells, subtle
+   surfaces. White 4% over current backdrop, blur 28px. */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-12);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Stronger tint — composer rows, active toggles, hover'd dock
+   cells (white 8%). Reads as a slightly raised pane. */
+.glass-strong {
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-14);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Heaviest tint — modals, palette, mark composer, action-btn
+   active (white 12%, sometimes paired with bg-1 mix). */
+.glass-heavy {
+  background: var(--glass-heavy);
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-18);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Glass card — the canonical "panel floats over chart" surface
+   used for headlines, demo blocks, library cards. Mixes bg-1
+   55% over transparent so the chart still reads through. */
+.glass-card {
+  background: color-mix(in oklab, var(--bg-1) 55%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-18);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: var(--shadow-glass);
+}

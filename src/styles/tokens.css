@@ -1,0 +1,220 @@
+/* =============================================================
+   autoplot — Design Tokens
+   Ported verbatim from app-design/project/Design System.html.
+   When app.css and Design System.html disagreed, Design System.html
+   wins (per docs/plan/README.md §2.5 rule 6). The notable delta:
+   --violet (oklch(0.78 0.18 320)) is present in Design System.html
+   §01 but absent from app.css:1-50. We adopt it.
+   ============================================================= */
+
+/* ----- Geist + Geist Mono (vendored, SIL OFL 1.1; see ./fonts/OFL.txt) ----- */
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Geist-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/Geist-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/GeistMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/GeistMono-Medium.woff2") format("woff2");
+}
+
+:root {
+  /* ---------- 01 · Color · OKLCH base ---------- */
+  /* Surfaces · cool blue-grey base (hue 260) */
+  --bg-0: oklch(0.11 0.008 260);
+  --bg-1: oklch(0.14 0.010 260);
+  --bg-2: oklch(0.18 0.012 260);
+
+  /* Ink ramp — text on dark */
+  --ink-0: oklch(0.96 0.005 260);
+  --ink-1: oklch(0.78 0.008 260);
+  --ink-2: oklch(0.55 0.010 260);
+  --ink-3: oklch(0.36 0.010 260);
+  --ink-4: oklch(0.24 0.010 260);
+
+  /* Glass tints — frosted material */
+  --glass:        color-mix(in oklab, white 4%, transparent);
+  --glass-strong: color-mix(in oklab, white 8%, transparent);
+  --glass-heavy:  color-mix(in oklab, white 12%, transparent);
+
+  /* Hairlines */
+  --hairline:   color-mix(in oklab, white 8%, transparent);
+  --hairline-2: color-mix(in oklab, white 14%, transparent);
+
+  /* Signal · semantic accents */
+  --up:     oklch(0.78 0.16 150);
+  --down:   oklch(0.70 0.20 25);
+  --accent:   oklch(0.82 0.14 215);
+  --warn:     oklch(0.85 0.16 80);
+  --violet:   oklch(0.78 0.18 320);
+  --emerald:  oklch(0.78 0.13 145); /* equity */
+
+  /* ---------- 03 · Form · Elevation ---------- */
+  --shadow-glass:
+    0 1px 0 0 color-mix(in oklab, white 10%, transparent) inset,
+    0 0 0 1px color-mix(in oklab, white 5%, transparent) inset,
+    0 30px 60px -20px color-mix(in oklab, black 60%, transparent),
+    0 12px 24px -12px color-mix(in oklab, black 70%, transparent);
+
+  /* ---------- 03 · Form · Motion ---------- */
+  --ease:        cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 180ms;
+  --t-med:  320ms;
+  --t-slow: 560ms;
+
+  /* ---------- 03 · Form · Radii ---------- */
+  --r-4:   4px;
+  --r-8:   8px;
+  --r-12: 12px;
+  --r-14: 14px;
+  --r-18: 18px;
+  --r-22: 22px;
+  --r-pill: 999px;
+
+  /* ---------- 03 · Form · Spacing ---------- */
+  --sp-4:   4px;
+  --sp-6:   6px;
+  --sp-8:   8px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-22: 22px;
+  --sp-32: 32px;
+  --sp-56: 56px;
+
+  /* ---------- 02 · Type · Families ---------- */
+  --font-sans: "Geist", "Geist Fallback", system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, "SF Mono",
+    "Menlo", "Consolas", monospace;
+
+  /* ---------- 02 · Type · Ramp ---------- */
+  /* Display / Price — mono · 76px · -0.025em · 400 · line 0.95 */
+  --fs-display: 76px;
+  --lh-display: 0.95;
+  --tracking-display: -0.025em;
+  /* Headline price — responsive scaling per app.css:147 (header-specific). */
+  --fs-headline-price: clamp(40px, 5.6vw, 76px);
+  /* H1 / Section — sans · 28px · -0.02em · 400 */
+  --fs-h1: 28px;
+  --tracking-h1: -0.02em;
+  /* H2 / Card — sans · 16px · -0.01em · 500 */
+  --fs-h2: 16px;
+  --tracking-h2: -0.01em;
+  /* Body — sans · 13px · 1.55 · ink-1 */
+  --fs-body: 13px;
+  --lh-body: 1.55;
+  /* Mono · readout — mono · 13px · 0.04em */
+  --fs-mono-md: 13px;
+  --tracking-mono-md: 0.04em;
+  /* Mono · meta — mono · 11px · 0.06em · ink-2 */
+  --fs-mono-sm: 11px;
+  --tracking-mono-sm: 0.06em;
+  /* Meta / caption — mono · 11px · 0.06em · ink-2 (alias of Mono·meta in Design System §02) */
+  --fs-meta: 11px;
+  /* Eyebrow — mono · 10px · 0.20em · uppercase · ink-3 */
+  --fs-eyebrow: 10px;
+  --tracking-eyebrow: 0.20em;
+
+  /* ---------- A4 · Layout reservations ---------- */
+  /* Each panel writes its own reservation when mounted (per
+     docs/plan/act-as-senior-software-cosmic-eich.md A4). */
+  /* Activity-bar rail width — the fixed dock gutter on each side. */
+  --rail-w: 48px;
+  /* Left-edge static toolbar gutter — aliases rail width (one source of truth). */
+  --toolbar-w: var(--rail-w);
+  /* Where the chart's content area begins on the left. Equals the toolbar gutter
+     today; kept as a distinct concept so the chart and any overlay tracking its
+     left edge (e.g. the floating headline) share one value if a left drawer is added. */
+  --chart-left-edge: var(--toolbar-w);
+  --reserve-left:  0px;
+  --reserve-right: 0px;
+}
+
+/* ===== Global element defaults ===== */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-0);
+  color: var(--ink-0);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Geist OpenType features — ss01 cv11 + tabular nums globally */
+  font-feature-settings: "ss01", "cv11", "tnum";
+  font-variant-numeric: tabular-nums;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; background: none; border: 0; outline: 0; }
+
+/* ===== Type utility classes (verbatim ramp from §02) ===== */
+.t-display {
+  font-family: var(--font-mono);
+  font-size: var(--fs-display);
+  letter-spacing: var(--tracking-display);
+  font-weight: 400;
+  line-height: var(--lh-display);
+  color: var(--ink-0);
+  font-variant-numeric: tabular-nums;
+}
+.t-h1 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h1);
+  letter-spacing: var(--tracking-h1);
+  font-weight: 400;
+}
+.t-h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 500;
+}
+.t-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  color: var(--ink-1);
+  line-height: var(--lh-body);
+  max-width: 56ch;
+}
+.t-mono-md {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-md);
+  letter-spacing: var(--tracking-mono-md);
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.t-mono-sm {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  letter-spacing: var(--tracking-mono-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.t-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}

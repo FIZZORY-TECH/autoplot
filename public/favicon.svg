@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Investment Pod">
+  <!-- 32-grid favicon: same 6-layer slab-industrial overflow template as
+       logo-mark.svg at 0.5x proportional scale. No layers dropped — inset
+       glow ring and full 3-circle focal node retained. -->
+  <defs>
+    <clipPath id="plate-fav">
+      <rect x="1" y="1" width="30" height="30" rx="7" ry="7" />
+    </clipPath>
+  </defs>
+
+  <!-- Plate base -->
+  <rect x="1" y="1" width="30" height="30" rx="7" ry="7"
+        fill="oklch(0.11 0.008 260)" />
+
+  <!-- Oversized monogram, clipped to plate -->
+  <g fill="oklch(0.96 0.005 260)" clip-path="url(#plate-fav)">
+    <!-- I stem: x=7..12 (w=5), y=2..28 -->
+    <rect x="7" y="2" width="5" height="26" />
+    <!-- Slab terminal: x=6..13 (w=7), y=28..30 -->
+    <rect x="6" y="28" width="7" height="2" />
+    <!-- Squared P-bowl with chamfered top-right corner -->
+    <path fill-rule="evenodd" d="
+      M 7 2
+      L 26.5 2
+      L 29 4.5
+      L 29 18
+      L 7 18
+      Z
+      M 12 5
+      L 25 5
+      L 25 15
+      L 12 15
+      Z
+    " />
+  </g>
+
+  <!-- Plate hairline ring -->
+  <rect x="1" y="1" width="30" height="30" rx="7" ry="7"
+        fill="none" stroke="oklch(0.96 0.005 260)" stroke-opacity="0.10" stroke-width="1" />
+  <!-- Cyan inset glow ring -->
+  <rect x="1.75" y="1.75" width="28.5" height="28.5" rx="6.25" ry="6.25"
+        fill="none" stroke="oklch(0.82 0.14 215)" stroke-opacity="0.20" stroke-width="0.5" />
+
+  <!-- Focal node: outer halo + mid + core -->
+  <circle cx="12" cy="5" r="2" fill="oklch(0.82 0.14 215)" fill-opacity="0.14" />
+  <circle cx="12" cy="5" r="1.25" fill="oklch(0.82 0.14 215)" fill-opacity="0.30" />
+  <circle cx="12" cy="5" r="0.75" fill="oklch(0.82 0.14 215)" />
+</svg>

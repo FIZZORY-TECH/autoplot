@@ -1,0 +1,502 @@
+/*
+ * DesignPreview.module.css — Mirrors Design System.html styles.
+ * Tokens from tokens.css; keyframes from motion.css.
+ * All CSS below matches the HTML prototype's selectors 1:1 where possible.
+ */
+
+/* ===== Page layout ===== */
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 80px 56px 120px;
+}
+
+/* ===== Header ===== */
+.dsHeader {
+  margin-bottom: 80px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--hairline);
+}
+.dsEyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 18px;
+}
+.dsTitle {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-size: clamp(40px, 5.4vw, 76px);
+  letter-spacing: -0.03em;
+  line-height: 0.96;
+  margin: 0;
+}
+.dsTitle em { font-style: normal; color: var(--ink-2); }
+.dsMeta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  text-align: right;
+  line-height: 1.6;
+}
+.dsMetaV { color: var(--ink-0); }
+
+/* ===== Section ===== */
+.section { margin-top: 88px; }
+.sectionHead {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 28px;
+}
+.sectionNum {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-3);
+}
+.sectionTitle {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 0;
+  flex: 1;
+}
+.sectionSub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+/* ===== Grid ===== */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+/* ===== Panel ===== */
+.panel {
+  padding: 24px;
+  background: color-mix(in oklab, var(--bg-1) 55%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+}
+.panelH4 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 18px;
+}
+
+/* ===== §01 Swatches ===== */
+.swatchRow { display: flex; gap: 8px; margin-bottom: 18px; }
+.swatch {
+  flex: 1;
+  border-radius: 12px;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--hairline);
+  min-height: 96px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.swName {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-0);
+  z-index: 1;
+}
+.swVal {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+  z-index: 1;
+  word-break: break-all;
+}
+.swBg0 { background: var(--bg-0); }
+.swBg1 { background: var(--bg-1); }
+.swBg2 { background: var(--bg-2); }
+
+/* Signal swatches */
+.swUp    { background: color-mix(in oklab, var(--up)    18%, var(--bg-1)); border-color: color-mix(in oklab, var(--up)    35%, transparent); }
+.swDown  { background: color-mix(in oklab, var(--down)  18%, var(--bg-1)); border-color: color-mix(in oklab, var(--down)  35%, transparent); }
+.swAcc   { background: color-mix(in oklab, var(--accent)18%, var(--bg-1)); border-color: color-mix(in oklab, var(--accent)35%, transparent); }
+.swWarn  { background: color-mix(in oklab, var(--warn)  18%, var(--bg-1)); border-color: color-mix(in oklab, var(--warn)  35%, transparent); }
+.swViolet{ background: color-mix(in oklab, var(--violet)18%, var(--bg-1)); border-color: color-mix(in oklab, var(--violet)35%, transparent); }
+
+.swPure {
+  position: absolute; inset: auto 12px 38px auto;
+  width: 22px; height: 22px; border-radius: 50%;
+}
+
+/* Ink swatches */
+.swInk { background: var(--bg-1); }
+
+/* Glass swatches */
+.swGlass {
+  flex: 1;
+  border-radius: 12px;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--hairline);
+  min-height: 96px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+  background: var(--bg-2);
+}
+.swGlassInner {
+  position: absolute; inset: 0;
+  background: var(--c);
+  backdrop-filter: blur(20px);
+}
+
+/* ===== §02 Type ===== */
+.typeStack {
+  padding: 32px 28px;
+  display: flex; flex-direction: column; gap: 22px;
+}
+.typeRow {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  align-items: baseline;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed var(--hairline);
+}
+.typeMeta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+.typeMetaV {
+  color: var(--ink-1);
+  display: block;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* ===== §03 Form ===== */
+.radiusRow { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.radiusChip {
+  width: 80px; height: 64px;
+  background: var(--glass-heavy);
+  border: 1px solid var(--hairline-2);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+.spacingRow { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.spCell {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-2);
+}
+.spBar {
+  background: var(--accent);
+  height: 8px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.shadowTile {
+  height: 130px;
+  border-radius: 18px;
+  background: var(--bg-1);
+  box-shadow: var(--shadow-glass);
+  border: 1px solid var(--hairline);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Motion ease balls */
+.easeRow { display: flex; flex-direction: column; gap: 12px; }
+.easeTrack {
+  display: grid;
+  grid-template-columns: 100px 1fr 56px;
+  gap: 14px; align-items: center;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-2);
+}
+.easeBar { position: relative; height: 4px; background: var(--hairline); border-radius: 2px; }
+.easeBall {
+  position: absolute;
+  width: 14px; height: 14px; top: -5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+@keyframes ease-go {
+  0%, 100% { left: 0; }
+  50% { left: calc(100% - 14px); }
+}
+.a1 { animation: ease-go 2.4s cubic-bezier(.22,1,.36,1) infinite; }
+.a2 { animation: ease-go 2.4s cubic-bezier(.34,1.56,.64,1) infinite; background: var(--warn); box-shadow: 0 0 12px var(--warn); }
+.a3 { animation: ease-go 2.4s linear infinite; background: var(--violet); box-shadow: 0 0 12px var(--violet); }
+
+/* ===== §04 Components ===== */
+.demoHeadline {
+  padding: 36px 40px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sym {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px 2px var(--accent);
+}
+.price {
+  font-family: var(--font-mono);
+  font-size: 64px;
+  letter-spacing: -0.025em; font-weight: 400; line-height: 0.95;
+  color: var(--ink-0); font-variant-numeric: tabular-nums;
+}
+.delta {
+  display: flex; align-items: center; gap: 14px;
+  font-family: var(--font-mono); font-size: 13px; color: var(--ink-2);
+}
+.deltaPill {
+  padding: 3px 9px; border-radius: 999px;
+  font-feature-settings: "tnum";
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em;
+}
+.up   { color: var(--up);   background: color-mix(in oklab, var(--up)   12%, transparent); border: 1px solid color-mix(in oklab, var(--up)   30%, transparent); }
+.down { color: var(--down); background: color-mix(in oklab, var(--down) 12%, transparent); border: 1px solid color-mix(in oklab, var(--down) 30%, transparent); }
+
+.btnRow { display: flex; gap: 10px; align-items: center; padding: 28px; flex-wrap: wrap; }
+.actionBtn {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center;
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--bg-1) 50%, transparent);
+  border: 1px solid var(--hairline);
+  backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: var(--shadow-glass);
+}
+.dockBtn {
+  width: 38px; height: 38px; border-radius: 12px;
+  display: grid; place-items: center;
+  color: var(--ink-2);
+  background: var(--glass);
+}
+.dockBtnActive {
+  color: var(--ink-0);
+  background: var(--glass-heavy);
+  box-shadow: inset 0 0 0 1px var(--hairline-2);
+}
+.primaryBtn {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  padding: 8px 14px; border-radius: 8px;
+  background: var(--accent); color: black; font-weight: 600; border: 0;
+  text-transform: uppercase;
+}
+.ghostBtn {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 14px; border-radius: 10px;
+  background: var(--glass-heavy); border: 1px solid var(--hairline-2); color: var(--ink-0);
+}
+.toggle {
+  width: 30px; height: 18px; border-radius: 999px;
+  background: var(--bg-2); border: 1px solid var(--hairline);
+  position: relative; display: inline-block;
+}
+.toggle::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 12px; height: 12px; border-radius: 50%; background: var(--ink-2);
+}
+.toggleOn { background: color-mix(in oklab, var(--accent) 35%, var(--bg-2)); }
+.toggleOn::after { transform: translateX(12px); background: var(--accent); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--hairline); background: var(--glass);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-1);
+}
+.chipDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+.tfScrubber {
+  display: inline-flex; align-items: center;
+  padding: 4px 6px;
+  background: color-mix(in oklab, var(--bg-0) 30%, transparent);
+  border-radius: 16px; border: 1px solid var(--hairline);
+}
+.tfTick {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; color: var(--ink-3);
+  width: 36px; height: 30px; display: grid; place-items: center;
+  border-radius: 9px; z-index: 1;
+}
+.tfTickActive { color: var(--ink-0); background: var(--glass-heavy); box-shadow: inset 0 0 0 1px var(--hairline-2); }
+
+.toggleRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in oklab, var(--bg-0) 30%, transparent);
+  border: 1px solid color-mix(in oklab, white 2%, transparent);
+}
+.toggleRowLeft { display: flex; align-items: center; gap: 10px; }
+.swatchLine { width: 14px; height: 3px; border-radius: 2px; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.toggleLabel { font-family: var(--font-sans); font-size: 13px; color: var(--ink-0); }
+.toggleDesc  { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; }
+
+/* Mark */
+.demoMark { position: relative; height: 130px; padding: 0 30px; }
+.priceMarkLine {
+  position: absolute; left: 30px; right: 30px; top: 60px;
+  height: 0;
+  border-top: 1px dashed color-mix(in oklab, var(--up) 80%, transparent);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--up) 50%, transparent));
+}
+.priceMarkTag {
+  position: absolute; top: 48px; left: 60px;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 9px 4px 8px; border-radius: 8px;
+  background: color-mix(in oklab, var(--bg-1) 75%, transparent);
+  backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in oklab, var(--up) 35%, transparent);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-0);
+}
+.led { width: 6px; height: 6px; border-radius: 50%; background: var(--up); box-shadow: 0 0 8px var(--up); }
+.priceMarkNote { color: var(--ink-2); border-left: 1px solid var(--hairline-2); padding-left: 8px; margin-left: 2px; }
+.rightTag {
+  position: absolute; top: 50px; right: 30px;
+  width: 60px; text-align: center;
+  padding: 3px 6px; background: var(--up); color: black;
+  font-family: var(--font-mono); font-size: 10px; border-radius: 4px; font-weight: 600;
+}
+
+.markComposer {
+  width: 280px; padding: 14px; border-radius: 14px;
+  background: color-mix(in oklab, var(--bg-1) 80%, transparent);
+  border: 1px solid var(--hairline-2);
+  backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: var(--shadow-glass);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.markComposerRow1 {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-1);
+}
+.swatches { display: flex; gap: 6px; }
+.swMini { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; background: var(--c); }
+.swMiniSelected { border-color: color-mix(in oklab, white 50%, transparent); box-shadow: 0 0 12px var(--c); }
+.markTextarea {
+  background: color-mix(in oklab, var(--bg-0) 50%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: 8px; padding: 8px 10px;
+  font-family: var(--font-sans); font-size: 13px; color: var(--ink-0);
+  resize: none; outline: none; min-height: 56px;
+}
+
+/* ===== §05 Agentic ===== */
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--bg-2);
+  overflow: hidden; position: relative;
+}
+.aurora {
+  position: absolute; inset: -30%;
+  background:
+    radial-gradient(circle at 30% 30%, oklch(0.82 0.16 215) 0%, transparent 55%),
+    radial-gradient(circle at 70% 70%, oklch(0.78 0.16 150) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, oklch(0.85 0.16 80) 0%, transparent 55%);
+  filter: blur(8px);
+  animation: auroraSpin 6s linear infinite;
+}
+.auroraViolet {
+  background:
+    radial-gradient(circle at 30% 30%, var(--violet) 0%, transparent 55%),
+    radial-gradient(circle at 70% 70%, oklch(0.82 0.14 260) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, var(--accent) 0%, transparent 55%);
+}
+@keyframes auroraSpin { to { transform: rotate(360deg); } }
+
+.composerRow {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px;
+  background: var(--glass-strong); border: 1px solid var(--hairline-2); border-radius: 14px;
+}
+.composerRow input {
+  flex: 1; appearance: none; border: 0; background: transparent;
+  color: var(--ink-0); font-family: var(--font-sans); font-size: 13px;
+  padding: 6px 10px; outline: 0;
+}
+.composerRow input::placeholder { color: var(--ink-3); }
+.agSend {
+  width: 30px; height: 30px; border-radius: 10px;
+  border: 0; background: var(--ink-0); color: var(--bg-0);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+}
+
+.trace { display: flex; flex-direction: column; gap: 6px; padding: 14px 20px 16px; }
+.traceRow {
+  display: grid; grid-template-columns: 14px 1fr auto;
+  align-items: center; gap: 8px;
+  font-size: 12px; color: var(--ink-2); padding: 3px 0;
+}
+.traceRowLive { color: var(--ink-0); }
+.traceRowDone { color: var(--ink-1); }
+.traceRowPending { opacity: 0.55; }
+.traceBullet { width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+.traceRowDone .traceBullet { color: var(--up); }
+.traceSpin {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.4px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+.traceDot { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-3); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.traceDetail { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); text-align: right; }
+
+.stratFlow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 18px 20px; }
+.stratNode {
+  --c: var(--accent);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--bg-2) 70%, transparent);
+}
+.snBadge {
+  width: 18px; height: 18px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  color: var(--c); background: color-mix(in oklab, var(--c) 18%, transparent);
+}
+.snBody { display: flex; flex-direction: column; line-height: 1.1; }
+.snKind { font-family: var(--font-mono); font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+.snLabel { font-size: 11px; color: var(--ink-0); }
+.stratEdge { color: var(--ink-3); display: inline-flex; }
+.stratTrigger { --c: var(--warn); }
+.stratFilter  { --c: var(--accent); }
+.stratEntry   { --c: var(--up); }
+.stratExit    { --c: var(--down); }
+
+/* ===== Footer ===== */
+.dsFoot {
+  margin-top: 120px; padding-top: 32px;
+  border-top: 1px solid var(--hairline);
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em;
+}

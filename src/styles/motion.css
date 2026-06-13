@@ -1,0 +1,510 @@
+/* =============================================================
+   autoplot — Motion Keyframes
+   Source: app-design/project/Design System.html §03 Form (motion),
+   §05 Agentic (auroraSpin, spin), referenced by trace, FAB pulse,
+   completed-row shimmer. Easings + durations live in tokens.css.
+   ============================================================= */
+
+/* Shimmer — a horizontal sweep across an element. Used on
+   completed thinking-trace rows. Drive with:
+     animation: shimmer 1.6s var(--ease) 1;
+   on a positioned element with a ::before that masks the gradient. */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Aurora — slow rotation for the AI avatar's blurred radial
+   gradient stack. 6s linear loop per Design System §05. */
+@keyframes aurora-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pulse — soft attention pulse, used by the AgentsFAB so the
+   user notices new agentic activity without it strobing. */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0   color-mix(in oklab, var(--accent) 60%, transparent),
+      0 0 24px  color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow:
+      0 0 0 14px color-mix(in oklab, var(--accent) 0%, transparent),
+      0 0 32px   color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+}
+
+/* Spring — bouncy enter, used on dock toggle and modal open.
+   Pair with var(--ease-spring) in animation/transition timing. */
+@keyframes spring-in {
+  0%   { transform: translateY(8px) scale(0.96); opacity: 0; }
+  60%  { transform: translateY(-2px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Spinner — 360° rotation, used by the live trace bullet
+   (§05 Agentic). Same primitive used elsewhere as a spinner. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Crosshair readout — small slide-down + fade-in for the OHLCV
+   floating glass card and the Headline OHLCV strip when the
+   crosshair is active. Drive with:
+     animation: crosshair-readout-in var(--t-fast) var(--ease);
+   Defined globally so Headline.tsx and Crosshair.tsx share one
+   keyframe definition (no inline duplicates). */
+@keyframes crosshair-readout-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* DockDrawer — side-aware slide + scale spring (Step 3 reusable docked drawer
+   in src/panels/DockDrawer.tsx). Enter translateX(±20px) scale(0.95) opacity 0
+   → rest, 380ms ease-spring; exit reverses over 220ms ease. Right edge slides
+   in from +20px; left edge mirrors to -20px. */
+@keyframes drawer-in-right {
+  from { opacity: 0; transform: translateX(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes drawer-out-right {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(20px) scale(0.95); }
+}
+@keyframes drawer-in-left {
+  from { opacity: 0; transform: translateX(-20px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes drawer-out-left {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-20px) scale(0.95); }
+}
+
+/* `backwards` fill-mode holds opacity 0 until the animation starts so
+   there's no flash on first render. Left-edge slide: the static toolbar
+   enters from −12px so it appears to peel in from the window edge. */
+@keyframes dock-in {
+  from { transform: translateX(-12px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+/* Flush-corner rule: static toolbar (left-edge bar) has square left corners
+   and rounded right (chart-facing) corners only. Applied via .dock--toolbar.
+   No background/border/blur — the toolbar root is fully transparent. */
+.dock--toolbar {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--r-12);
+  border-bottom-right-radius: var(--r-12);
+  /* Explicitly transparent: overrides any cascade that might re-introduce a fill. */
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.dock-btn {
+  position: relative;
+  width: 38px; height: 38px;
+  border-radius: var(--r-12);
+  display: grid; place-items: center;
+  color: var(--ink-2);
+  /* background intentionally omitted — no fill in idle state. */
+  /* Explicit property list avoids animating layout properties unintentionally. */
+  transition: color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+  flex-shrink: 0;
+}
+/* Hover: icon brightens to --ink-0, subtle scale lift, outward accent glow.
+   No background fill — affordance is pure color + glow + scale per ui-ux-pro-max
+   `state-clarity` + `scale-feedback` guidelines for transparent surfaces. */
+.dock-btn:hover {
+  color: var(--ink-0);
+  transform: scale(1.08);
+  box-shadow: 0 0 12px -4px oklch(0.82 0.14 215 / 0.25);
+}
+/* Active orb: accent-colored icon + stronger outward glow + a faint accent
+   underline indicator dot at bottom edge. No background fill — active state
+   is conveyed by full accent color on the icon/glyph and the glow halo,
+   per ui-ux-pro-max `state-clarity` + `nav-state-active` for transparent bars.
+   The ::after pseudo is a 3px accent dot anchored to the bottom-center of the
+   orb, acting as a position indicator that reads clearly over a busy chart. */
+.dock-btn.active {
+  color: var(--accent);
+  box-shadow: 0 0 20px -4px oklch(0.82 0.14 215 / 0.40);
+}
+.dock-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.85;
+}
+/* Active + hover: accent color stays, scale lift + stronger glow. */
+.dock-btn.active:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px -4px oklch(0.82 0.14 215 / 0.55);
+}
+/* Keyboard-only focus ring: outer soft halo + inset accent hairline.
+   No outline so the ring follows the border-radius of the orb.
+   Preserved for full a11y compliance (ui-ux-pro-max `focus-states`). */
+.dock-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px oklch(0.82 0.14 215 / 0.10), inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}
+/* Active + focused: union of the active glow and the focus ring layers. */
+.dock-btn.active:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 20px -4px oklch(0.82 0.14 215 / 0.40),
+    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
+    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+}
+.dock-btn svg { display: block; }
+
+/* Hover tooltip label — base (top-centered, above the element).
+   Used by the left toolbar orbs and flyout items via .glabel--top.
+   The --rail variant (ActivityBar right rail) overrides position to
+   the side — see below. */
+.dock-btn .glabel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  white-space: nowrap;
+  background: color-mix(in oklab, var(--bg-0) 80%, transparent);
+  backdrop-filter: blur(16px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast), transform var(--t-fast);
+}
+.dock-btn:hover .glabel {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-3px);
+}
+
+/* Top-positioned tooltip with a downward-pointing caret.
+   Applied to left-toolbar orbs and flyout items so their tooltip
+   rises ABOVE the element rather than rightward into the flyout.
+   Two-pseudo trick: ::after paints the filled triangle (matching
+   the tooltip background); ::before paints a slightly-larger border
+   triangle behind it (matching --hairline) to give the caret an
+   outline that reads as a connected speech-bubble pointer.
+   Both pseudos are on .dock-btn .glabel--top, not on --rail.
+   z-index: 2 ensures it paints above sibling flyout orbs. */
+.dock-btn .glabel--top {
+  z-index: 2;
+}
+.dock-btn .glabel--top::after,
+.dock-btn .glabel--top::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  pointer-events: none;
+}
+/* Border triangle — hairline color, 1px wider on each side */
+.dock-btn .glabel--top::before {
+  border: 5px solid transparent;
+  border-top-color: var(--hairline);
+  transform: translateX(-50%);
+  /* sits at same top as ::after so it peeks 1px below */
+}
+/* Fill triangle — tooltip background color */
+.dock-btn .glabel--top::after {
+  border: 4px solid transparent;
+  border-top-color: color-mix(in oklab, var(--bg-0) 80%, transparent);
+  transform: translateX(-50%);
+  margin-top: 1px; /* overlap the border triangle by 1px so only its edge shows */
+}
+
+/* =============================================================
+   Per-group collapse/expand — each of the three groups (chart-type,
+   timeframe, drawing-tools) always shows ONLY its selected orb.
+   Clicking the orb TOGGLES the flyout open/closed; only one group
+   can be open at a time. Reveal is driven EXCLUSIVELY by the
+   .dock-group--open class (JS click-to-toggle, universal — no
+   hover-to-open, no :focus-within reveal). Keyboard: the orb is a
+   <button aria-haspopup aria-expanded>; Enter/Space activate it,
+   Esc closes + restores focus to the orb, focusout closes if focus
+   leaves the group entirely. Click-away (pointerdown outside) closes.
+   ============================================================= */
+
+/* Per-group cell — the always-visible orb is in normal flow; the flyout is
+   absolutely positioned so revealing it never reflows the toolbar column. */
+.dock-group--collapsible {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Flyout — flies right out of the toolbar gutter into the chart margin,
+   vertically centered on its group cell. Transparent — no panel background,
+   no blur, no border, no shadow. Sibling orbs float directly over the chart;
+   their individual color/glow affordance (from .dock-btn hover/active rules)
+   keeps them legible over the busy dark chart per ui-ux-pro-max `blur-purpose`
+   and `state-clarity`. The shortcut-hints footer uses its own hairline separator.
+   Collapsed: visibility:hidden so its buttons leave the keyboard Tab order.
+
+   STRUCTURE: the flyout outer container is a flex column so that the orb row
+   and the optional footer (shortcut hints, tools group only) stack vertically.
+   `.dock-group__flyout-orbs` inside holds the HORIZONTAL ROW of sibling orbs,
+   extending rightward per the approved plan/mockup. */
+.dock-group__flyout {
+  /* Transparent panel — no fill, no blur, no shadow, no border. */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--sp-8));
+  transform: translateY(-50%) translateX(-6px);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  /* Narrow-window overflow guard — clamp the panel so it never
+     reaches the right window edge; honors MIN_CHART_W = 240px. */
+  max-width: calc(100vw - var(--toolbar-w) - var(--sp-8) - var(--sp-16));
+  /* Collapsed state. */
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  /* Collapse snaps over --t-fast (exit-faster-than-enter asymmetry per §7);
+     visibility is delayed to the end of the collapse so the fade plays out. */
+  transition:
+    opacity var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease),
+    visibility 0s linear var(--t-fast);
+}
+
+/* Orb row — the horizontal strip of sibling items inside the flyout. Orbs
+   are laid out left-to-right, aligned to the vertical center of the row.
+   flex-wrap:nowrap keeps the strip in a single line; at MIN_CHART_W=240px
+   there is always room for 5 orbs (5×38 + 4×4 gap + 2×6 pad ≈ 218px). */
+.dock-group__flyout-orbs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--sp-4);
+}
+
+/* Reveal ONLY via the JS click-to-toggle class — no :hover, no :focus-within.
+   The longer --ease-spring over --t-med reads as a deliberate fly-out. */
+.dock-group--collapsible.dock-group--open .dock-group__flyout {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+  transition:
+    opacity var(--t-med) var(--ease-spring),
+    transform var(--t-med) var(--ease-spring),
+    visibility 0s;
+}
+
+/* Flyout footer (shortcut hints in the tools group only) — a hairline-topped
+   mono chip row. */
+.dock-group__flyout-footer {
+  width: 100%;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--hairline);
+}
+.dock-group__hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.dock-group__hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  color: var(--ink-2);
+}
+
+/* Mono TF orb label — the timeframe group renders text orbs (1h/4h/1d/1w)
+   instead of SVG icons; use Geist Mono to match the prototype's tick type. */
+.dock-tf-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+/* Horizontal hairline divider between group cells — rendered as a
+   ::after pseudo-element so it sits OUTSIDE the flex-gap math.
+   This keeps the per-group gap (--sp-6) identical to the right rail's
+   button-to-button gap, aligning their first icons on the same Y row.
+   Positioned at bottom of cell + half-gap offset to visually center
+   the hairline in the 6px gap between orbs. */
+.dock-group--collapsible:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  /* Sits just below the bottom edge of this group cell, centered in the gap. */
+  top: calc(100% + calc(var(--sp-6) / 2));
+  left: var(--sp-8);
+  right: var(--sp-8);
+  height: 1px;
+  background: var(--hairline);
+  pointer-events: none;
+}
+
+/* Reduced motion — opacity-only reveal (no transform fly-out / spring),
+   matching the project-wide intent-driven transition policy below. */
+@media (prefers-reduced-motion: reduce) {
+  .dock-group__flyout,
+  .dock-group--collapsible.dock-group--open .dock-group__flyout {
+    transform: translateY(-50%);
+    transition: opacity var(--t-fast) var(--ease), visibility 0s;
+  }
+}
+
+/* Rail variant — the ActivityBar is a vertical toolbar, so the tooltip slides
+   out to the side instead of above (above would clip at the rail's top edge).
+   Side is resolved by the parent `.activity-bar` (left rail → tooltip right;
+   right rail → tooltip left). */
+.dock-btn .glabel--rail {
+  bottom: auto;
+  top: 50%;
+  left: calc(100% + 10px);
+  right: auto;
+  transform: translateY(-50%);
+}
+.dock-btn:hover .glabel--rail {
+  transform: translateY(-50%) translateX(3px);
+}
+/* Right rail: flip the tooltip to the left side of the icon. */
+.activity-bar[aria-label='Right dock'] .dock-btn .glabel--rail {
+  left: auto;
+  right: calc(100% + 10px);
+}
+.activity-bar[aria-label='Right dock'] .dock-btn:hover .glabel--rail {
+  transform: translateY(-50%) translateX(-3px);
+}
+
+/* rev2.1 — rail surface is conditional: transparent when its side has no open
+   drawer; glass when docked so rail + drawer merge into one surface. Mirrors
+   useDockStore open-state (ActivityBar toggles the modifier). */
+.activity-bar--docked {
+  background: var(--glass);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+}
+
+/* Flush-edge corners: the rail-adjacent edge is square (docked, not floating);
+   only the chart-facing corners keep the glass radius. Two-class specificity
+   intentionally beats .glass-strong's all-corner radius. */
+.dock-drawer.dock-drawer--left {
+  border-top-left-radius: 0; border-bottom-left-radius: 0;
+  border-top-right-radius: var(--r-14); border-bottom-right-radius: var(--r-14);
+}
+.dock-drawer.dock-drawer--right {
+  border-top-right-radius: 0; border-bottom-right-radius: 0;
+  border-top-left-radius: var(--r-14); border-bottom-left-radius: var(--r-14);
+}
+
+/* Headline tick flash — a 1px underline that briefly appears under
+   the headline price on each tick, then fades + collapses. Color is
+   set by the .tick-flash--up / .tick-flash--down modifier. Drive by
+   re-mounting the element (key={tickSeq}) so the animation replays. */
+@keyframes headline-tick-flash {
+  0%   { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(0.6); }
+}
+
+/* Delta pill flip-pop — a brief scale pop when the delta-pill's sign
+   flips (e.g. +→− or −→+). Applied via data-flipped="true" toggled
+   by the consumer for one frame. */
+@keyframes delta-flip-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.tick-flash {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  animation: headline-tick-flash var(--t-fast) var(--ease) forwards;
+}
+.tick-flash--up   { background: var(--up); }
+.tick-flash--down { background: var(--down); }
+
+.delta-pill[data-flipped="true"] {
+  animation: delta-flip-pop 220ms var(--ease);
+}
+
+/* =============================================================
+   prefers-reduced-motion — disable shimmer + aurora rotation,
+   keep crisp transitions. Per Design System §06 principle 05
+   (live data fades — never slides), still-images for ambient
+   loops; user-driven transitions retained.
+   ============================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* Allow short, intent-driven transitions; cap to 1ms for
+       the long, ambient ones if explicitly requested. */
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  /* Hard-disable the ambient/looping animations. Crisp
+     transitions on user intent are still allowed via :root
+     ease/duration tokens. */
+  .shimmer,
+  [data-anim="shimmer"] { animation: none !important; }
+
+  .aurora,
+  [data-anim="aurora"] { animation: none !important; transform: none !important; }
+
+  .pulse,
+  [data-anim="pulse"] { animation: none !important; }
+
+  /* Headline tick flash + delta-pill flip-pop are intent-driven on
+     price changes, but still ambient enough to suppress under
+     reduced-motion. */
+  .tick-flash,
+  .delta-pill[data-flipped="true"] { animation: none !important; }
+
+  /* DockDrawer — cap the slide/scale spring to ~1ms so the drawer appears
+     and disappears instantly. The mountOnOpen unmount still fires because
+     DockDrawer drives it from a JS fallback timeout, not animationend. The
+     `*` rule above already caps animation-duration to 1ms; this keeps the
+     intent explicit alongside the other drawer-motion rules. */
+  .dock-drawer { animation-duration: 1ms !important; }
+
+  /* Toolbar dock-in — opacity-only fallback; suppress the translateX slide. */
+  .dock--toolbar {
+    animation-name: dock-in-reduced !important;
+  }
+}
+
+/* Reduced-motion dock-in: opacity-only, no translateX. Declared outside the
+   @media block so it is available as an animation-name target. */
+@keyframes dock-in-reduced {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

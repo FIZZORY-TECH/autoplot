@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Investment Pod">
+  <!-- ============ OVERFLOW IP MONOGRAM — SLAB INDUSTRIAL ============
+       Plate is the frame (60x60, rx=14). Heavier construction: stem
+       width 10 (~17% of plate). Two characterful moves:
+       (a) slab terminal on the I-stem bottom — flares to width 14 in
+           the last 4px before bleeding past the plate edge;
+       (b) squared P-bowl — hard right-angle rectangle replaces the arc,
+           with a single chamfered top-right corner for tension.
+       Hairline ring + cyan inset glow render OVER the clipped monogram
+       so the frame edge stays crisp. -->
+  <defs>
+    <clipPath id="plate">
+      <rect x="2" y="2" width="60" height="60" rx="14" ry="14" />
+    </clipPath>
+  </defs>
+
+  <!-- Plate base -->
+  <rect x="2" y="2" width="60" height="60" rx="14" ry="14"
+        fill="oklch(0.11 0.008 260)" />
+
+  <!-- Oversized monogram, clipped to plate -->
+  <g fill="oklch(0.96 0.005 260)" clip-path="url(#plate)">
+    <!-- I stem: x=14..24 (w=10), y=4..56 (top consumed by bowl, bleeds bottom via slab) -->
+    <rect x="14" y="4" width="10" height="52" />
+    <!-- Slab terminal at I-stem bottom: x=12..26 (w=14, +2 each side), y=56..60
+         Flat hammered foot. Bleeds the plate's bottom rounded corner; clipPath crops it. -->
+    <rect x="12" y="56" width="14" height="4" />
+    <!-- Squared P-bowl: outer rectangle x=14..58, y=4..36 with one chamfered top-right
+         corner (5px chamfer from x=53,y=4 to x=58,y=9). Counter is a plain rectangle
+         x=24..50, y=10..30. Right edge sits at x=58 — bleeds plate's right corner; clipped. -->
+    <path fill-rule="evenodd" d="
+      M 14 4
+      L 53 4
+      L 58 9
+      L 58 36
+      L 14 36
+      Z
+      M 24 10
+      L 50 10
+      L 50 30
+      L 24 30
+      Z
+    " />
+  </g>
+
+  <!-- Plate frame edges drawn ON TOP so the aperture stays crisp -->
+  <rect x="2" y="2" width="60" height="60" rx="14" ry="14"
+        fill="none" stroke="oklch(0.96 0.005 260)" stroke-opacity="0.10" stroke-width="1" />
+  <rect x="3.5" y="3.5" width="57" height="57" rx="12.5" ry="12.5"
+        fill="none" stroke="oklch(0.82 0.14 215)" stroke-opacity="0.20" stroke-width="0.5" />
+
+  <!-- ============ AI CUE — SINGLE FOCAL NODE ============
+       Optical anchor: inside top-left corner of the P counter at the
+       I/P junction (24, 10), where the stem's right edge meets the
+       counter's top edge. -->
+  <circle cx="24" cy="10" r="4" fill="oklch(0.82 0.14 215)" fill-opacity="0.14" />
+  <circle cx="24" cy="10" r="2.5" fill="oklch(0.82 0.14 215)" fill-opacity="0.30" />
+  <circle cx="24" cy="10" r="1.5" fill="oklch(0.82 0.14 215)" />
+</svg>

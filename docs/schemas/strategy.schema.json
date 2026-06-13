@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoplot.local/schemas/strategy.schema.json",
+  "title": "Strategy",
+  "description": "Strategy schema for the P7 Co-Strategy lane (Wave 5 / W5-A). Mirror of src/ai/schemas.ts:Strategy. Indicator + Op enums are re-used from dataset.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "thesis", "rules", "version", "createdAt"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "thesis": { "type": "string" },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry", "exit"],
+      "properties": {
+        "entry": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/StrategyCondition" }
+        },
+        "exit": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/StrategyCondition" }
+        },
+        "filters": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/StrategyCondition" }
+        }
+      }
+    },
+    "perf": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/definitions/PerfStats" }
+      ]
+    },
+    "version": { "const": 1 },
+    "createdAt": { "type": "number" }
+  },
+  "definitions": {
+    "Indicator": {
+      "enum": [
+        "close",
+        "open",
+        "high",
+        "low",
+        "volume",
+        "sma",
+        "ema",
+        "rsi",
+        "atr",
+        "bollinger_upper",
+        "bollinger_middle",
+        "bollinger_lower",
+        "donchian_high",
+        "donchian_low",
+        "realized_vol"
+      ]
+    },
+    "Op": {
+      "enum": ["<", ">", "<=", ">=", "==", "crossesAbove", "crossesBelow"]
+    },
+    "IndicatorRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": { "$ref": "#/definitions/Indicator" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "StrategyCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["indicator", "op", "value"],
+      "properties": {
+        "indicator": { "$ref": "#/definitions/Indicator" },
+        "op": { "$ref": "#/definitions/Op" },
+        "value": {
+          "oneOf": [
+            { "type": "number" },
+            { "$ref": "#/definitions/IndicatorRef" }
+          ]
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "PerfStats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["winRate", "sharpe", "maxDrawdown", "trades"],
+      "properties": {
+        "winRate": { "type": "number" },
+        "sharpe": { "type": "number" },
+        "maxDrawdown": { "type": "number" },
+        "trades": { "type": "number" }
+      }
+    }
+  }
+}

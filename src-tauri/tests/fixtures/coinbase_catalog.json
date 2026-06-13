@@ -1,0 +1,58 @@
+[
+  {
+    "id": "BTC-USD",
+    "base_currency": "BTC",
+    "quote_currency": "USD",
+    "display_name": "BTC/USD",
+    "status": "online",
+    "trading_disabled": false
+  },
+  {
+    "id": "ETH-USD",
+    "base_currency": "ETH",
+    "quote_currency": "USD",
+    "display_name": "ETH/USD",
+    "status": "online",
+    "trading_disabled": false
+  },
+  {
+    "id": "BTC-USDC",
+    "base_currency": "BTC",
+    "quote_currency": "USDC",
+    "display_name": "BTC/USDC",
+    "status": "online",
+    "trading_disabled": false
+  },
+  {
+    "id": "SOL-USD",
+    "base_currency": "SOL",
+    "quote_currency": "USD",
+    "display_name": "SOL/USD",
+    "status": "online",
+    "trading_disabled": false
+  },
+  {
+    "id": "ETH-EUR",
+    "base_currency": "ETH",
+    "quote_currency": "EUR",
+    "display_name": "ETH/EUR",
+    "status": "online",
+    "trading_disabled": false
+  },
+  {
+    "id": "BAD-USD",
+    "base_currency": "BAD",
+    "quote_currency": "USD",
+    "display_name": "BAD/USD",
+    "status": "online",
+    "trading_disabled": true
+  },
+  {
+    "id": "DELISTED-USD",
+    "base_currency": "DELISTED",
+    "quote_currency": "USD",
+    "display_name": "DELISTED/USD",
+    "status": "delisted",
+    "trading_disabled": false
+  }
+]

@@ -1,0 +1,40 @@
+name: Docs link check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  offline:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lychee (offline)
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --offline --include-fragments './**/*.md' '!**/node_modules/**' '!**/dist/**' '!**/target/**' '!**/.git/**'
+          fail: true
+
+  online:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore lychee cache
+        uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+      - name: Lychee (online)
+        uses: lycheeverse/lychee-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --no-progress --cache --max-cache-age 1d --include-fragments './**/*.md' '!**/node_modules/**' '!**/dist/**' '!**/target/**' '!**/.git/**'
+          fail: true
