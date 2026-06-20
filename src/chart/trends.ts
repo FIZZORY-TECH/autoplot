@@ -4,7 +4,7 @@
  * Mirrors `src/chart/marks.ts` in shape: a trend list projects to canvas
  * coordinates via the same view + layout math the base renderers use, then
  * draws each as a 2px line segment in the trend's color token. The selected
- * trend gets a soft glow halo (shadowColor + shadowBlur) so the user can
+ * trend gets a wider lineWidth (2.5px) and endpoint dots so the user can
  * tell which trend Backspace will delete.
  *
  * The trend tool's *in-progress* draft (mid-drag) is rendered the same way
@@ -79,9 +79,6 @@ export function createTrendsRenderer(args: TrendsRendererArgs): ChartRenderer {
 
         ctx.save();
         if (isSelected) {
-          // Soft glow halo for the selected trend.
-          ctx.shadowColor = stroke;
-          ctx.shadowBlur = 8;
           ctx.lineWidth = 2.5;
         } else {
           ctx.lineWidth = 2;

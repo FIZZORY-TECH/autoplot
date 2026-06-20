@@ -110,27 +110,12 @@ function drawMarks(rc: RenderContext, projected: ProjectedMark[]): void {
     ctx.stroke();
     ctx.restore();
 
-    // LED dot — bigger + soft halo for Comments.
+    // Dot — bigger for Comments.
     const dotR = p.isComment ? 4.5 : 3;
-    if (p.isComment) {
-      ctx.save();
-      ctx.fillStyle = p.mark.color;
-      ctx.globalAlpha = 0.18;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, dotR + 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
     ctx.save();
     ctx.fillStyle = p.mark.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
-    ctx.fill();
-    // Inner highlight to read as a "lit" LED.
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(p.x - dotR * 0.3, p.y - dotR * 0.3, dotR * 0.35, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }

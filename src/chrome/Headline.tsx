@@ -324,9 +324,8 @@ export function Headline({
               height: 7,
               borderRadius: '50%',
               background: assetColor,
-              boxShadow: `0 0 14px 2px ${assetColor}`,
               transition:
-                'background-color var(--t-med) var(--ease), box-shadow var(--t-med) var(--ease)',
+                'background-color var(--t-med) var(--ease)',
               flexShrink: 0,
             }}
           />
@@ -460,8 +459,6 @@ export function Headline({
                   borderRadius: '50%',
                   background: 'var(--warn)',
                   flexShrink: 0,
-                  boxShadow:
-                    '0 0 10px color-mix(in oklab, var(--warn) 60%, transparent)',
                 }}
               />
               Connect Alpaca
@@ -486,16 +483,14 @@ export function Headline({
             />
             <style>{`
               @keyframes headline-empty-pulse {
-                0%   { box-shadow: 0 0 0 0   color-mix(in oklab, var(--warn) 55%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 60%, transparent); }
-                70%  { box-shadow: 0 0 0 6px color-mix(in oklab, var(--warn)  0%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 60%, transparent); }
-                100% { box-shadow: 0 0 0 0   color-mix(in oklab, var(--warn)  0%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 60%, transparent); }
+                0%,  100% { opacity: 1; }
+                50%        { opacity: 0.35; }
               }
               .headline-empty-dot {
                 animation: headline-empty-pulse 2.2s var(--ease) infinite;
               }
               .headline-empty-cta:hover {
-                background: color-mix(in oklab, var(--warn) 22%, transparent);
-                box-shadow: 0 0 22px color-mix(in oklab, var(--warn) 38%, transparent);
+                background: var(--tint-hover);
               }
               @media (prefers-reduced-motion: reduce) {
                 .headline-empty-dot { animation: none; }

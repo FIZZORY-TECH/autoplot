@@ -88,8 +88,6 @@ function ConnectedToast({
             height: 8,
             borderRadius: '50%',
             background: 'var(--emerald)',
-            boxShadow:
-              '0 0 10px color-mix(in oklab, var(--emerald) 70%, transparent)',
             flexShrink: 0,
           }}
         />
@@ -271,8 +269,6 @@ export function EquityCredsBanner(): JSX.Element | null {
             height: 8,
             borderRadius: '50%',
             background: 'var(--warn)',
-            boxShadow:
-              '0 0 0 0 color-mix(in oklab, var(--warn) 60%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 70%, transparent)',
             flexShrink: 0,
           }}
         />
@@ -415,16 +411,15 @@ export function EquityCredsBanner(): JSX.Element | null {
           to   { opacity: 1; }
         }
         @keyframes equity-banner-pulse {
-          0%   { box-shadow: 0 0 0 0   color-mix(in oklab, var(--warn) 55%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 70%, transparent); }
-          70%  { box-shadow: 0 0 0 7px color-mix(in oklab, var(--warn)  0%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 70%, transparent); }
-          100% { box-shadow: 0 0 0 0   color-mix(in oklab, var(--warn)  0%, transparent), 0 0 10px color-mix(in oklab, var(--warn) 70%, transparent); }
+          0%   { opacity: 1; }
+          50%  { opacity: 0.35; }
+          100% { opacity: 1; }
         }
         .equity-banner-dot {
           animation: equity-banner-pulse 2.2s var(--ease) infinite;
         }
         .equity-banner-cta:hover {
-          background: color-mix(in oklab, var(--warn) 28%, transparent);
-          box-shadow: 0 0 18px color-mix(in oklab, var(--warn) 40%, transparent);
+          background: var(--tint-hover);
         }
         @media (prefers-reduced-motion: reduce) {
           .equity-banner-dot { animation: none; }
@@ -538,8 +533,6 @@ export function EquityChartEmpty({
                 height: 10,
                 borderRadius: '50%',
                 background: 'var(--warn)',
-                boxShadow:
-                  '0 0 14px color-mix(in oklab, var(--warn) 70%, transparent)',
               }}
             />
           </div>
@@ -631,8 +624,7 @@ export function EquityChartEmpty({
           }
           .chart-empty-ring--2 { animation-delay: 0.6s; }
           .chart-empty-cta:hover {
-            background: color-mix(in oklab, var(--emerald) 32%, transparent);
-            box-shadow: 0 0 28px color-mix(in oklab, var(--emerald) 45%, transparent);
+            background: var(--tint-hover);
           }
           @media (prefers-reduced-motion: reduce) {
             .chart-empty-ring { animation: none; opacity: 0.55; }

@@ -1,8 +1,8 @@
 /* =============================================================
    autoplot — Motion Keyframes
    Source: app-design/project/Design System.html §03 Form (motion),
-   §05 Agentic (auroraSpin, spin), referenced by trace, FAB pulse,
-   completed-row shimmer. Easings + durations live in tokens.css.
+   §05 Agentic (spin), referenced by trace, completed-row shimmer.
+   Easings + durations live in tokens.css.
    ============================================================= */
 
 /* Shimmer — a horizontal sweep across an element. Used on
@@ -12,29 +12,6 @@
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
-}
-
-/* Aurora — slow rotation for the AI avatar's blurred radial
-   gradient stack. 6s linear loop per Design System §05. */
-@keyframes aurora-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Pulse — soft attention pulse, used by the AgentsFAB so the
-   user notices new agentic activity without it strobing. */
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow:
-      0 0 0 0   color-mix(in oklab, var(--accent) 60%, transparent),
-      0 0 24px  color-mix(in oklab, var(--accent) 35%, transparent);
-  }
-  50% {
-    transform: scale(1.04);
-    box-shadow:
-      0 0 0 14px color-mix(in oklab, var(--accent) 0%, transparent),
-      0 0 32px   color-mix(in oklab, var(--accent) 50%, transparent);
-  }
 }
 
 /* Spring — bouncy enter, used on dock toggle and modal open.
@@ -118,23 +95,21 @@
   transition: color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
   flex-shrink: 0;
 }
-/* Hover: icon brightens to --ink-0, subtle scale lift, outward accent glow.
-   No background fill — affordance is pure color + glow + scale per ui-ux-pro-max
-   `state-clarity` + `scale-feedback` guidelines for transparent surfaces. */
+/* Hover: icon brightens to --ink-0, subtle scale lift, flat tint fill. */
 .dock-btn:hover {
   color: var(--ink-0);
   transform: scale(1.08);
-  box-shadow: 0 0 12px -4px oklch(0.82 0.14 215 / 0.25);
+  background: var(--tint-hover);
 }
-/* Active orb: accent-colored icon + stronger outward glow + a faint accent
-   underline indicator dot at bottom edge. No background fill — active state
-   is conveyed by full accent color on the icon/glyph and the glow halo,
-   per ui-ux-pro-max `state-clarity` + `nav-state-active` for transparent bars.
+/* Active orb: accent-colored icon + hairline ring + tint fill + a faint accent
+   underline indicator dot at bottom edge. Active state is conveyed by full
+   accent color on the icon/glyph and the ring/tint cues.
    The ::after pseudo is a 3px accent dot anchored to the bottom-center of the
    orb, acting as a position indicator that reads clearly over a busy chart. */
 .dock-btn.active {
   color: var(--accent);
-  box-shadow: 0 0 20px -4px oklch(0.82 0.14 215 / 0.40);
+  box-shadow: var(--ring-accent);
+  background: var(--tint-hover);
 }
 .dock-btn.active::after {
   content: '';
@@ -147,25 +122,22 @@
   background: var(--accent);
   opacity: 0.85;
 }
-/* Active + hover: accent color stays, scale lift + stronger glow. */
+/* Active + hover: accent color stays, scale lift + tint. */
 .dock-btn.active:hover {
   transform: scale(1.08);
-  box-shadow: 0 0 24px -4px oklch(0.82 0.14 215 / 0.55);
+  background: var(--tint-hover);
 }
-/* Keyboard-only focus ring: outer soft halo + inset accent hairline.
+/* Keyboard-only focus ring: standardized crisp ring, no blur.
    No outline so the ring follows the border-radius of the orb.
    Preserved for full a11y compliance (ui-ux-pro-max `focus-states`). */
 .dock-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px oklch(0.82 0.14 215 / 0.10), inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }
-/* Active + focused: union of the active glow and the focus ring layers. */
+/* Active + focused: active hairline + standardized focus ring (no blur layer). */
 .dock-btn.active:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 20px -4px oklch(0.82 0.14 215 / 0.40),
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--ring-accent), var(--focus-ring);
 }
 .dock-btn svg { display: block; }
 
@@ -510,9 +482,6 @@
 
   .aurora,
   [data-anim="aurora"] { animation: none !important; transform: none !important; }
-
-  .pulse,
-  [data-anim="pulse"] { animation: none !important; }
 
   /* Headline tick flash + delta-pill flip-pop are intent-driven on
      price changes, but still ambient enough to suppress under

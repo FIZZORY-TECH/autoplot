@@ -29,11 +29,8 @@ const containerStyle: CSSProperties = {
   letterSpacing: 'var(--tracking-mono-sm)',
   textTransform: 'uppercase',
   fontVariantNumeric: 'tabular-nums',
-  // Layered: hairline + soft warn glow. No bright stroke (Principle 04).
-  boxShadow: [
-    'var(--shadow-glass)',
-    '0 0 12px color-mix(in oklab, var(--warn) 35%, transparent)',
-  ].join(', '),
+  // Layered: elevation only. No bright stroke (Principle 04).
+  boxShadow: 'var(--shadow-glass)',
   transition: 'opacity var(--t-fast) var(--ease)',
   cursor: 'help',
   userSelect: 'none',
@@ -44,7 +41,6 @@ const dotStyle: CSSProperties = {
   height: 6,
   borderRadius: '50%',
   background: 'var(--warn)',
-  boxShadow: '0 0 6px color-mix(in oklab, var(--warn) 60%, transparent)',
 };
 
 export function MockBadge() {

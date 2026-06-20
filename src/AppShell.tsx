@@ -1192,11 +1192,7 @@ export default function AppShell() {
       style={{
         minHeight: '100vh',
         height: '100vh',
-        background: `
-          radial-gradient(1200px 800px at 18% 10%, color-mix(in oklab, var(--accent) 5%, transparent), transparent 60%),
-          radial-gradient(1000px 700px at 90% 90%, color-mix(in oklab, var(--violet) 4%, transparent), transparent 60%),
-          var(--bg-0)
-        `,
+        background: 'var(--bg-0)',
         position: 'relative',
         overflow: 'hidden',
       }}

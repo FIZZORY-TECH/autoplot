@@ -154,7 +154,6 @@ export function IndicatorPanel() {
                     borderRadius: '50%',
                     background: item.color,
                     flexShrink: 0,
-                    boxShadow: `0 0 6px ${item.color}`,
                   }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

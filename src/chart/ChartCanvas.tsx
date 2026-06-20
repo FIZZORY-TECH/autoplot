@@ -965,14 +965,13 @@ export function ChartCanvas({
       : cursorFor(activeTool)
     : 'default';
 
-  // Step 4 — Active-tool affordance: subtle inset-left glow on the canvas
-  // wrapper when any tool is active, so the user has unambiguous chart-side
-  // feedback that "now click to drop X" beyond just the Dock highlight.
-  // The prototype design guidance prefers a single subtle glow over a thick
-  // border (Principle 04) — we use color-mix with var(--accent) at 40%.
+  // Step 4 — Active-tool affordance: flat solid accent edge-bar (4px inset on
+  // the left edge) on the canvas wrapper when any tool is active, giving
+  // unambiguous chart-side feedback that "now click to drop X" beyond just the
+  // Dock highlight. Uses a flat inset bar (Principle 04) — no blur, no glow.
   const toolActive = activeTool !== undefined && activeTool !== 'none';
   const toolGlow = toolActive
-    ? 'inset 4px 0 12px color-mix(in oklab, var(--accent, #7CC9F0) 40%, transparent)'
+    ? 'inset 4px 0 0 var(--accent)'
     : 'none';
 
   return (

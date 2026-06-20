@@ -495,7 +495,6 @@ export function AddAssetModal(): JSX.Element | null {
             height: 9,
             borderRadius: '50%',
             background: 'var(--warn)',
-            boxShadow: '0 0 13px color-mix(in oklab, var(--warn) 70%, transparent)',
           }}
         />
       </div>
@@ -616,7 +615,6 @@ export function AddAssetModal(): JSX.Element | null {
             height: 8,
             borderRadius: '50%',
             background: dotColor,
-            boxShadow: `0 0 8px ${dotColor}`,
             flexShrink: 0,
           }}
         />
@@ -932,7 +930,6 @@ export function AddAssetModal(): JSX.Element | null {
                           height: 8,
                           borderRadius: '50%',
                           background: p.accent,
-                          boxShadow: `0 0 8px ${p.accent}`,
                         }}
                       />
                       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12 }}>
@@ -1205,8 +1202,7 @@ export function AddAssetModal(): JSX.Element | null {
             }
             .addmodal-equity-ring--2 { animation-delay: 0.6s; }
             .chart-empty-cta:hover {
-              background: color-mix(in oklab, var(--emerald) 32%, transparent);
-              box-shadow: 0 0 28px color-mix(in oklab, var(--emerald) 45%, transparent);
+              background: var(--tint-hover);
             }
             @media (prefers-reduced-motion: reduce) {
               .addmodal-equity-ring { animation: none; opacity: 0.55; }

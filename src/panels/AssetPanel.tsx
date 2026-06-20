@@ -380,14 +380,9 @@ export function AssetPanel(): JSX.Element {
                 background: isActive
                   ? 'color-mix(in oklab, var(--accent) 10%, transparent)'
                   : isHover ? 'var(--glass)' : 'transparent',
-                // Active row during transition: glow ring instead of plain inset border.
-                boxShadow: isActive && isTransitioning
-                  ? [
-                      '0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent)',
-                      '0 0 22px color-mix(in oklab, var(--accent) 35%, transparent)',
-                    ].join(', ')
-                  : isActive
-                  ? 'inset 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent)'
+                // Active row: hairline accent ring (no bloom).
+                boxShadow: isActive
+                  ? 'var(--ring-accent)'
                   : 'none',
                 // Active row during transition: scale pop (CSS animation class).
                 animation: isActive && isTransitioning
@@ -450,8 +445,6 @@ export function AssetPanel(): JSX.Element {
                             height: 8,
                             borderRadius: '50%',
                             background: 'var(--warn)',
-                            boxShadow:
-                              '0 0 8px color-mix(in oklab, var(--warn) 70%, transparent)',
                           }}
                         />
                       </button>
@@ -463,7 +456,6 @@ export function AssetPanel(): JSX.Element {
                         borderRadius: '50%',
                         flexShrink: 0,
                         background: dotColor,
-                        boxShadow: `0 0 8px ${dotColor}`,
                       }}
                     />
                     )}

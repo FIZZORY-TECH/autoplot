@@ -41,6 +41,11 @@
 
   --font-sans: "Geist", "Geist Fallback", system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+
+  /* Shared flat interactive-state tokens (mirror production tokens.css) */
+  --ring-accent: inset 0 0 0 1px var(--accent);
+  --tint-hover: var(--glass-strong);
+  --focus-ring: 0 0 0 3px color-mix(in oklab, var(--accent) 12%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
 }
 
 * { box-sizing: border-box; }
@@ -61,11 +66,7 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 /* ============ Atmospheric backdrop ============ */
 .app {
   position: fixed; inset: 0;
-  background:
-    radial-gradient(1200px 800px at 18% 10%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 60%),
-    radial-gradient(1000px 700px at 90% 90%, color-mix(in oklab, oklch(0.5 0.18 320) 6%, transparent), transparent 60%),
-    radial-gradient(900px 600px at 50% 50%, color-mix(in oklab, white 2%, transparent), transparent 70%),
-    var(--bg-0);
+  background: var(--bg-0);
   isolation: isolate;
 }
 .app::before {
@@ -155,7 +156,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 .headline .sym .dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--asset-color, var(--accent));
-  box-shadow: 0 0 14px 2px var(--asset-color, var(--accent));
 }
 .headline .price {
   font-family: var(--font-mono);
@@ -251,35 +251,17 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   display: grid; place-items: center;
   cursor: grab;
   transition: transform var(--t-fast) var(--ease-spring);
-  background:
-    radial-gradient(circle at 30% 25%, color-mix(in oklab, var(--o-color) 70%, white 12%), color-mix(in oklab, var(--o-color) 35%, var(--bg-1) 75%) 70%);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--o-color) 30%, transparent),
-    0 0 16px -2px color-mix(in oklab, var(--o-color) 50%, transparent),
-    inset 0 1px 0 color-mix(in oklab, white 40%, transparent);
+  background: color-mix(in oklab, var(--o-color) 35%, var(--bg-1));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--o-color) 40%, transparent);
 }
 .orb:active { cursor: grabbing; }
 .orb:hover { transform: scale(1.12); }
 .orb.active {
   transform: scale(1.18);
-  box-shadow:
-    0 0 0 2px var(--o-color),
-    0 0 24px 2px color-mix(in oklab, var(--o-color) 65%, transparent),
-    inset 0 1px 0 color-mix(in oklab, white 50%, transparent);
+  box-shadow: var(--ring-accent);
+  background: var(--tint-hover);
 }
 .orb.dragging { opacity: 0.4; transform: scale(1.18); }
-.orb .heartbeat {
-  position: absolute; inset: -2px;
-  border-radius: 50%;
-  border: 1px solid var(--o-color);
-  opacity: 0;
-  animation: heartbeat 2.2s var(--ease) infinite;
-}
-@keyframes heartbeat {
-  0%   { opacity: 0.8; transform: scale(1); }
-  60%  { opacity: 0;   transform: scale(1.7); }
-  100% { opacity: 0;   transform: scale(1.7); }
-}
 .orb .ticker {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -355,8 +337,9 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   -webkit-backdrop-filter: blur(28px) saturate(160%);
   /* No hairline divider — the rail and drawer read as one unified surface. */
 }
-/* Rail icons reuse .dock-btn verbatim (glow/box-shadow on .active — never a
-   solid border, Principle 04). The rail label flips to the chart-facing side. */
+/* Rail icons reuse .dock-btn verbatim (hairline ring via var(--ring-accent) on
+   .active — never a solid border, Principle 04). The rail label flips to the
+   chart-facing side. */
 .activity-bar .glabel {
   bottom: auto;
   top: 50%;
@@ -434,30 +417,18 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 }
 .dock-btn.active {
   color: var(--ink-0);
-  background: var(--glass-heavy);
-  /* Principle 04: glow via shadow only — never a solid border. */
-  box-shadow:
-    inset 0 0 0 1px var(--hairline-2),
-    0 4px 14px -4px color-mix(in oklab, black 70%, transparent),
-    0 0 24px -6px oklch(0.82 0.14 215 / 0.35);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: var(--tint-hover);
+  box-shadow: var(--ring-accent);
 }
-/* Focus ring: keyboard-accessible highlight using accent glow layers. */
+/* Focus ring: keyboard-accessible highlight using shared token. */
 .dock-btn:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }
-/* Union of active layers + focus layers — no double-shadow collapse. */
+/* Union of active + focus — ring-accent merged with focus-ring. */
 .dock-btn.active:focus-visible {
   outline: none;
-  box-shadow:
-    inset 0 0 0 1px var(--hairline-2),
-    0 4px 14px -4px color-mix(in oklab, black 70%, transparent),
-    0 0 24px -6px oklch(0.82 0.14 215 / 0.35),
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10);
+  box-shadow: var(--ring-accent), var(--focus-ring);
 }
 .dock-btn svg { display: block; }
 .dock-btn .glabel {
@@ -642,9 +613,8 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 .palette .row .o {
   width: 26px; height: 26px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 25%, color-mix(in oklab, var(--o-color) 70%, white 12%), color-mix(in oklab, var(--o-color) 35%, var(--bg-1)) 70%);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--o-color) 30%, transparent), 0 0 12px -2px var(--o-color);
+  background: color-mix(in oklab, var(--o-color) 35%, var(--bg-1));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--o-color) 40%, transparent);
 }
 .palette .row .sym {
   font-family: var(--font-mono);
@@ -703,7 +673,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   height: 0;
   pointer-events: auto;
   border-top: 1px dashed color-mix(in oklab, var(--mark-color) 80%, transparent);
-  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--mark-color) 50%, transparent));
 }
 .price-mark .tag {
   position: absolute;
@@ -727,7 +696,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 .price-mark .tag .led {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--mark-color);
-  box-shadow: 0 0 8px var(--mark-color);
 }
 .price-mark .tag .px { color: var(--ink-0); }
 .price-mark .tag .note {
@@ -793,7 +761,7 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 .mark-composer .sw.selected {
   transform: scale(1.15);
   border-color: color-mix(in oklab, white 50%, transparent);
-  box-shadow: 0 0 12px var(--c);
+  box-shadow: var(--ring-accent);
 }
 .mark-composer textarea {
   background: color-mix(in oklab, var(--bg-0) 50%, transparent);
@@ -881,7 +849,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   width: 14px; height: 3px;
   border-radius: 2px;
   background: var(--ov-color);
-  box-shadow: 0 0 10px var(--ov-color);
 }
 .indicator-panel .toggle-row .label {
   font-family: var(--font-sans);
@@ -1334,7 +1301,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--p-accent);
-  box-shadow: 0 0 8px var(--p-accent);
 }
 .am-prov-label {
   font-family: var(--font-sans);
@@ -1515,13 +1481,10 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   height: 48px;
   border-radius: 50%;
   border: 1px solid var(--hairline-2);
-  background:
-    radial-gradient(circle at 30% 30%, oklch(0.82 0.14 215 / 0.35), transparent 60%),
-    radial-gradient(circle at 70% 70%, oklch(0.78 0.18 320 / 0.30), transparent 60%),
-    color-mix(in oklab, var(--bg-1) 80%, transparent);
+  background: color-mix(in oklab, var(--bg-1) 80%, transparent);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow: var(--shadow-glass), 0 0 28px -6px oklch(0.82 0.14 215 / 0.35);
+  box-shadow: var(--shadow-glass);
   color: var(--ink-0);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -1530,17 +1493,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 }
 .agents-fab:hover { transform: scale(1.06); }
 .agents-fab.open { transform: scale(0.92); opacity: 0.7; }
-.agents-fab .fab-pulse {
-  position: absolute; inset: -2px;
-  border-radius: 50%;
-  border: 1px solid oklch(0.82 0.14 215 / 0.5);
-  animation: fabPulse 2.4s var(--ease) infinite;
-  pointer-events: none;
-}
-@keyframes fabPulse {
-  0% { transform: scale(0.96); opacity: 0.7; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
 
 .agents-panel {
   position: fixed;
@@ -1551,10 +1503,7 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   max-width: calc(100vw - 36px);
   border-radius: 22px;
   border: 1px solid var(--hairline);
-  background:
-    radial-gradient(120% 80% at 100% 0%, oklch(0.82 0.14 215 / 0.06), transparent 60%),
-    radial-gradient(120% 80% at 0% 100%, oklch(0.78 0.18 320 / 0.06), transparent 60%),
-    color-mix(in oklab, var(--bg-1) 84%, transparent);
+  background: color-mix(in oklab, var(--bg-1) 84%, transparent);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
   box-shadow: var(--shadow-glass);
@@ -1581,7 +1530,7 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   display: inline-flex; align-items: center; gap: 6px;
   transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
-.ag-mode-btn .dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.ag-mode-btn .dot { width: 6px; height: 6px; border-radius: 50%; }
 .ag-mode-btn.active { color: var(--ink-0); background: var(--glass-strong); }
 .ag-tools { display: inline-flex; align-items: center; gap: 6px; }
 .ag-tab {
@@ -1645,22 +1594,11 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 }
 .aurora {
   position: absolute; inset: -30%;
-  background:
-    radial-gradient(circle at 30% 30%, oklch(0.82 0.16 215) 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, oklch(0.78 0.16 150) 0%, transparent 55%),
-    radial-gradient(circle at 50% 50%, oklch(0.85 0.16 80) 0%, transparent 55%);
-  filter: blur(8px);
-  animation: auroraSpin 6s linear infinite;
+  background: color-mix(in oklab, var(--accent) 35%, var(--bg-2));
+  /* Flat/static: spin removed for prototype↔production parity. */
 }
 .aurora.violet {
-  background:
-    radial-gradient(circle at 30% 30%, oklch(0.78 0.18 320) 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, oklch(0.82 0.14 260) 0%, transparent 55%),
-    radial-gradient(circle at 50% 50%, oklch(0.85 0.14 215) 0%, transparent 55%);
-}
-.aurora.tiny { filter: blur(4px); }
-@keyframes auroraSpin {
-  to { transform: rotate(360deg); }
+  background: color-mix(in oklab, oklch(0.78 0.18 320) 35%, var(--bg-2));
 }
 
 /* Trace */
@@ -1728,7 +1666,6 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 .ds-swatch {
   width: 8px; height: 28px; border-radius: 4px;
   background: var(--ds-color);
-  box-shadow: 0 0 14px -2px var(--ds-color);
 }
 .ds-label { flex: 1; color: var(--ink-0); font-size: 12.5px; font-weight: 500; }
 .ds-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); }
@@ -1820,7 +1757,7 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
   border-radius: 14px;
   transition: border-color var(--t-fast);
 }
-.ag-composer-row:focus-within { border-color: oklch(0.82 0.14 215 / 0.45); box-shadow: 0 0 0 3px oklch(0.82 0.14 215 / 0.10); }
+.ag-composer-row:focus-within { box-shadow: var(--focus-ring); border-color: transparent; }
 .ag-attach, .ag-send {
   width: 30px; height: 30px; border-radius: 10px;
   border: 0; background: transparent; color: var(--ink-2);
@@ -1982,7 +1919,5 @@ input { font: inherit; color: inherit; background: none; border: 0; outline: 0; 
 }
 .panel-head-close:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }

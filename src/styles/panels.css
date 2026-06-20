@@ -34,21 +34,12 @@
 
 .aurora {
   position: absolute; inset: -30%;
-  background:
-    radial-gradient(circle at 30% 30%, oklch(0.82 0.16 215) 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, oklch(0.78 0.16 150) 0%, transparent 55%),
-    radial-gradient(circle at 50% 50%, oklch(0.85 0.16 80) 0%, transparent 55%);
-  filter: blur(8px);
-  animation: aurora-spin 6s linear infinite;
+  background: color-mix(in oklab, var(--accent) 35%, var(--bg-2));
+  /* Flat/static: blur and spin removed. */
 }
 .aurora.violet {
-  background:
-    radial-gradient(circle at 30% 30%, oklch(0.78 0.18 320) 0%, transparent 55%),
-    radial-gradient(circle at 70% 70%, oklch(0.82 0.14 260) 0%, transparent 55%),
-    radial-gradient(circle at 50% 50%, oklch(0.85 0.14 215) 0%, transparent 55%);
+  background: color-mix(in oklab, oklch(0.78 0.18 320) 35%, var(--bg-2));
 }
-.aurora.tiny { filter: blur(4px); }
-.aurora.breathing { animation-duration: 3s; }
 
 /* =============================================================
    Settings panel (W2-A) — visual peer of agents-panel.
@@ -82,9 +73,7 @@
 .settings-tab:active { transform: scale(0.97); }
 .settings-tab:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }
 .settings-tab.active {
   color: var(--ink-0);
@@ -145,7 +134,7 @@
 .settings-row input[type="text"]:focus,
 .settings-row input[type="number"]:focus {
   border-color: oklch(0.82 0.14 215 / 0.45);
-  box-shadow: 0 0 0 3px oklch(0.82 0.14 215 / 0.10);
+  box-shadow: var(--focus-ring);
 }
 
 .settings-row select {
@@ -187,8 +176,8 @@
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--ink-3);
 }
-.settings-status.ok .dot { background: var(--up); box-shadow: 0 0 6px var(--up); }
-.settings-status.err .dot { background: var(--down); box-shadow: 0 0 6px var(--down); }
+.settings-status.ok .dot { background: var(--up); }
+.settings-status.err .dot { background: var(--down); }
 
 .settings-toggle {
   display: inline-flex; align-items: center; gap: 8px;
@@ -261,10 +250,7 @@
   width: 420px;
   max-width: calc(100vw - 36px);
   border-radius: var(--r-22);
-  background:
-    radial-gradient(120% 80% at 100% 0%, oklch(0.82 0.14 215 / 0.10), transparent 60%),
-    radial-gradient(120% 80% at 0% 100%, oklch(0.78 0.18 320 / 0.08), transparent 60%),
-    color-mix(in oklab, var(--bg-1) 90%, transparent);
+  background: var(--bg-1);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
   box-shadow: var(--shadow-glass);
@@ -539,7 +525,6 @@
   min-height: 28px;
   border-radius: 4px;
   background: var(--ds-color);
-  box-shadow: 0 0 14px -2px var(--ds-color);
   flex: 0 0 auto;
 }
 .ds-textcol {
@@ -594,9 +579,7 @@
 .ds-toggle:active { transform: scale(0.97); }
 .ds-toggle:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }
 .ds-toggle.on {
   color: var(--bg-0);
@@ -634,9 +617,7 @@
 .lib-rm:active { transform: scale(0.93); }
 .lib-rm:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }
 .lib-rm.arming {
   width: auto;
@@ -776,8 +757,6 @@
   height: 3px;
   border-radius: 2px;
   background: var(--ov-color);
-  /* Glow aids scanability — matches renderer dot color */
-  box-shadow: 0 0 10px var(--ov-color);
   flex: 0 0 auto;
 }
 .legend-hud-label {
@@ -1204,8 +1183,7 @@
 }
 .terminal-start-hint-dismiss:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 10%, transparent),
-    inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+  box-shadow: var(--focus-ring);
 }
 .terminal-start-hint-list {
   display: flex;
@@ -1273,12 +1251,11 @@
 .terminal-restart-btn:hover {
   color: var(--accent);
   transform: scale(1.03);
-  box-shadow: 0 0 16px -4px color-mix(in oklab, var(--accent) 40%, transparent);
+  background: var(--tint-hover);
 }
 .terminal-restart-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 10%, transparent),
-    inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 /* --- Strategy Artifact Panel (Step 11b) --- */
@@ -1433,8 +1410,6 @@
   /* FirstRun / bypass overlay */
   .firstrun-overlay { animation: none; }
 
-  .aurora { animation: none; }
-
   /* ds-badge animations */
   .ds-badge.stopped { animation: none; }
   .ds-badge.incomplete { animation: none; }
@@ -1445,8 +1420,7 @@
   /* strat shimmer */
   .strat-perf-shimmer { animation: none; }
 
-  /* Terminal start overlay — no shimmer/spin/dissolve. Static text, instant
-     hide (the .aurora rule above already kills the avatar spin). */
+  /* Terminal start overlay — no shimmer/spin/dissolve. Static text, instant hide. */
   .terminal-start-status {
     animation: none;
     background: none;
@@ -1535,7 +1509,5 @@
 
 .panel-head-close:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 3px oklch(0.82 0.14 215 / 0.10),
-    inset 0 0 0 1px oklch(0.82 0.14 215 / 0.45);
+  box-shadow: var(--focus-ring);
 }

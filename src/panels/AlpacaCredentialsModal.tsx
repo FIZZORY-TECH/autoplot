@@ -599,12 +599,11 @@ export function AlpacaCredentialsModal({
     borderRadius: 'var(--r-22)',
     overflow: 'hidden',
     boxShadow: saved
-      ? '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent), 0 0 0 1px color-mix(in oklab, var(--emerald) 50%, transparent), 0 0 56px color-mix(in oklab, var(--emerald) 30%, transparent)'
+      ? '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent), inset 0 0 0 1px var(--emerald)'
       : '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
     backdropFilter: 'blur(40px) saturate(180%)',
     WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     animation: 'addmodal-in 360ms var(--ease-spring)',
-    transition: 'box-shadow var(--t-med) var(--ease)',
   };
 
   const fieldStyle: CSSProperties = {
@@ -631,7 +630,7 @@ export function AlpacaCredentialsModal({
     fontSize: 13,
     color: 'var(--ink-0)',
     outline: 'none',
-    transition: 'border-color var(--t-fast), box-shadow var(--t-fast)',
+    transition: 'border-color var(--t-fast)',
   };
 
   const busy = saving || probing || reloading;
@@ -700,8 +699,6 @@ export function AlpacaCredentialsModal({
                   height: 6,
                   borderRadius: '50%',
                   background: 'var(--emerald)',
-                  boxShadow:
-                    '0 0 10px color-mix(in oklab, var(--emerald) 70%, transparent)',
                 }}
               />
               Equity data · Alpaca Markets
@@ -961,8 +958,6 @@ export function AlpacaCredentialsModal({
                 background: 'color-mix(in oklab, var(--warn) 10%, transparent)',
                 border:
                   '1px solid color-mix(in oklab, var(--warn) 28%, transparent)',
-                boxShadow:
-                  '0 0 24px color-mix(in oklab, var(--warn) 14%, transparent)',
               }}
             >
               <div
@@ -981,8 +976,6 @@ export function AlpacaCredentialsModal({
                     height: 6,
                     borderRadius: '50%',
                     background: 'var(--warn)',
-                    boxShadow:
-                      '0 0 10px color-mix(in oklab, var(--warn) 70%, transparent)',
                   }}
                 />
                 <div
@@ -1347,9 +1340,6 @@ export function AlpacaCredentialsModal({
                       ? 'color-mix(in oklab, var(--emerald) 50%, transparent)'
                       : 'var(--hairline)'
                 }`,
-                boxShadow: saved
-                  ? '0 0 24px color-mix(in oklab, var(--emerald) 40%, transparent)'
-                  : 'none',
                 cursor: canSubmit ? 'pointer' : 'not-allowed',
                 transition: 'all var(--t-med) var(--ease)',
                 /**

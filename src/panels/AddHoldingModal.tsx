@@ -353,7 +353,6 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
             height: 7,
             borderRadius: '50%',
             background: dotColor,
-            boxShadow: `0 0 6px ${dotColor}`,
             flexShrink: 0,
           }}
         />
@@ -603,7 +602,6 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
                             height: 7,
                             borderRadius: '50%',
                             background: chip.accent,
-                            boxShadow: `0 0 6px ${chip.accent}`,
                           }}
                         />
                         {chip.label}

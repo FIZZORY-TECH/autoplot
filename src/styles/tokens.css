@@ -86,6 +86,15 @@
     0 30px 60px -20px color-mix(in oklab, black 60%, transparent),
     0 12px 24px -12px color-mix(in oklab, black 70%, transparent);
 
+  /* ---------- 03 · Form · Interactive-state vocabulary (frozen) ----------
+     Shared tokens for the minimal-UI / no-glow design language:
+     active hairline ring, hover/active background tint, and the
+     standardized crisp focus indicator. */
+  --ring-accent:  inset 0 0 0 1px var(--accent);
+  --tint-hover:   var(--glass-strong);
+  --focus-ring:   0 0 0 3px color-mix(in oklab, var(--accent) 12%, transparent),
+                  inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+
   /* ---------- 03 · Form · Motion ---------- */
   --ease:        cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);

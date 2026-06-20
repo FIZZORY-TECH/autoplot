@@ -302,37 +302,15 @@ export function aiOverlayGlow(values: number[], color: string): ChartRenderer {
       const len = values.length;
       const seriesStart = eIdx - len;
 
-      // Two-pass: outer glow first (wide, low-alpha), then crisp line on top.
-      // Save/restore so we don't leak shadow state into other overlays.
+      // Plain colored stroke — glow pass removed (ADR-0012 neon-retire).
+      // Save/restore so we don't leak state into other overlays.
       ctx.save();
 
-      // Glow pass.
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
       ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.55;
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      let started = false;
-      for (let i = sIdx; i < eIdx; i++) {
-        const si = i - seriesStart;
-        if (si < 0 || si >= len) continue;
-        const v = values[si];
-        if (!Number.isFinite(v)) { started = false; continue; }
-        const x = xToPx(i + 0.5);
-        const y = yToPx(v);
-        if (!started) { ctx.moveTo(x, y); started = true; }
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-
-      // Crisp top line — no shadow, full alpha.
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
       ctx.globalAlpha = 1;
       ctx.lineWidth = 1.4;
       ctx.beginPath();
-      started = false;
+      let started = false;
       for (let i = sIdx; i < eIdx; i++) {
         const si = i - seriesStart;
         if (si < 0 || si >= len) continue;
