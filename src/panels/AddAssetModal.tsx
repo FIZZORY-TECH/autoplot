@@ -603,7 +603,7 @@ export function AddAssetModal(): JSX.Element | null {
           gap: 12,
           padding: '0 14px',
           height: ROW_HEIGHT,
-          borderRadius: 10,
+          borderRadius: 'var(--r-12)',
           transition: 'background var(--t-fast)',
           boxSizing: 'border-box',
         }}
@@ -688,7 +688,7 @@ export function AddAssetModal(): JSX.Element | null {
           style={{
             width: 24,
             height: 24,
-            borderRadius: 8,
+            borderRadius: 'var(--r-8)',
             background: added
               ? 'transparent'
               : isHovered
@@ -725,8 +725,8 @@ export function AddAssetModal(): JSX.Element | null {
   const scrimStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    zIndex: 60,
-    background: 'color-mix(in oklab, black 30%, transparent)',
+    zIndex: 'var(--z-modal-scrim)',
+    background: 'var(--scrim)',
     backdropFilter: 'blur(18px) saturate(120%)',
     WebkitBackdropFilter: 'blur(18px) saturate(120%)',
     display: 'grid',
@@ -740,12 +740,11 @@ export function AddAssetModal(): JSX.Element | null {
     maxHeight: '78vh',
     display: 'flex',
     flexDirection: 'column',
-    background: 'color-mix(in oklab, var(--bg-1) 72%, transparent)',
-    border: '1px solid var(--hairline-2)',
+    background: 'var(--surface-overlay)',
     borderRadius: 'var(--r-22)',
     overflow: 'hidden',
     boxShadow:
-      '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
+      '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
     backdropFilter: 'blur(40px) saturate(180%)',
     WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     animation: 'addmodal-in 360ms var(--ease-spring)',
@@ -785,7 +784,7 @@ export function AddAssetModal(): JSX.Element | null {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: 'var(--sp-16) var(--sp-22)',
+              padding: 'var(--sp-14) var(--sp-18)',
               borderBottom: '1px solid var(--hairline)',
             }}
           >
@@ -833,7 +832,7 @@ export function AddAssetModal(): JSX.Element | null {
               display: 'flex',
               alignItems: 'center',
               gap: 'var(--sp-12)',
-              padding: 'var(--sp-12) var(--sp-22)',
+              padding: 'var(--sp-10) var(--sp-18)',
               borderBottom: '1px solid var(--hairline)',
               color: 'var(--ink-3)',
             }}
@@ -891,7 +890,7 @@ export function AddAssetModal(): JSX.Element | null {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '14px 22px',
+                padding: '10px 18px',
                 flexWrap: 'wrap',
                 borderBottom: '1px solid var(--hairline)',
               }}
@@ -1016,7 +1015,7 @@ export function AddAssetModal(): JSX.Element | null {
           {refreshError && !q.trim() && (
             <div
               style={{
-                padding: '6px 22px',
+                padding: '5px 18px',
                 fontFamily: 'var(--font-mono)',
                 fontSize: 10,
                 color: 'var(--down)',
@@ -1049,7 +1048,7 @@ export function AddAssetModal(): JSX.Element | null {
                   <div
                     style={{
                       height: ROW_HEIGHT,
-                      borderRadius: 10,
+                      borderRadius: 'var(--r-12)',
                       background: 'color-mix(in oklab, var(--bg-1) 40%, transparent)',
                       animation: 'catalog-pulse 1.2s ease-in-out infinite',
                       marginBottom: 2,
@@ -1157,7 +1156,7 @@ export function AddAssetModal(): JSX.Element | null {
                 fontSize: 10,
                 color: 'var(--ink-3)',
                 letterSpacing: '0.04em',
-                padding: '8px 22px',
+                padding: '7px 18px',
                 borderTop: '1px solid var(--hairline)',
                 display: 'flex',
                 alignItems: 'center',

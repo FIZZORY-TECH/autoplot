@@ -30,7 +30,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Bar } from '../data/MarketDataProvider';
 import { fmtPrice, fmtPct } from '../engine/indicators';
-import { useReducedMotion } from '../lib/reducedMotion';
 import { PanelSpec as PanelSpecSchema, type PanelSpec } from '../ai/schemas';
 import { useOverlayHitStore } from '../stores/useOverlayHitStore';
 import type { HitRegion, HitResult } from './hitRegions';
@@ -306,8 +305,6 @@ export function OverlayInfoPanel({
   onDeleteMark,
   onEditMark,
 }: OverlayInfoPanelProps): JSX.Element | null {
-  const reducedMotion = useReducedMotion();
-
   // Hover hit + click signal come from the dedicated store (not props), so the
   // app shell no longer re-renders on hotspot enter/leave or chart click — this
   // panel is the ONLY subscriber and thus the only thing that re-renders.
@@ -388,20 +385,20 @@ export function OverlayInfoPanel({
     <div
       role="dialog"
       aria-label={spec.title ?? 'Overlay details'}
-      className="glass-card"
+      className="glass-card overlay-enter"
       style={{
         position: 'absolute',
         left,
         top,
         width: PANEL_W,
-        padding: 'var(--sp-8) var(--sp-12)',
-        zIndex: 6,
+        padding: 'var(--sp-6) var(--sp-8)',
+        zIndex: 'var(--z-chart-panel)',
+        background: 'var(--surface-overlay-strong)',
         pointerEvents: interactive ? 'auto' : 'none',
         color: 'var(--ink-1)',
         fontSize: 'var(--fs-meta, 11px)',
         fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
         fontVariantNumeric: 'tabular-nums',
-        animation: reducedMotion ? undefined : 'crosshair-readout-in var(--t-fast) var(--ease)',
       }}
     >
       {/* Header — title + cycler + close (when pinned). */}

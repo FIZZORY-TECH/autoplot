@@ -242,7 +242,7 @@ export function Headline({
         maxWidth: 'min(560px, 48vw)',
         // Chart-overlay tier: above the chart canvas, below the rails/drawers/actions
         // so the floating headline can never overlap the side chrome.
-        zIndex: 5,
+        zIndex: 'var(--z-chrome)',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--sp-4)',
@@ -580,7 +580,7 @@ export function Headline({
             ...monoBase,
             display: 'inline-flex',
             alignItems: 'center',
-            padding: '3px 9px',
+            padding: '3px 7px',
             borderRadius: 'var(--r-pill)',
             background: deltaBg,
             border: `1px solid ${deltaBorder}`,
@@ -710,7 +710,7 @@ export function Headline({
               ...monoBase,
               display: 'inline-flex',
               alignItems: 'center',
-              padding: '3px 10px',
+              padding: '3px 8px',
               borderRadius: 'var(--r-pill)',
               color: 'var(--warn)',
               fontSize: 'var(--fs-mono-sm)',

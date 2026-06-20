@@ -109,25 +109,23 @@ export function MarkComposer({
       role="dialog"
       aria-label={mode === 'comment' ? 'Comment composer' : 'Mark composer'}
       tabIndex={-1}
-      className="glass-strong"
+      className="glass-strong overlay-enter"
       onKeyDown={onKeyDown}
       style={{
         position: 'absolute',
         left,
         top,
         width: COMPOSER_W,
-        padding: 'var(--sp-12)',
-        borderRadius: 'var(--r-12)',
-        zIndex: 50,
+        padding: 'var(--sp-8)',
+        borderRadius: 'var(--r-14)',
+        zIndex: 'var(--z-chart-panel)',
         outline: 'none',
         boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--sp-8)',
-        // Solid glass fallback (in case glass-strong isn't aggressive enough
-        // for floating placement).
-        background:
-          'color-mix(in oklab, var(--bg-1, #11151c) 88%, transparent)',
+        // over-content fill — see --surface-overlay in tokens.css (ADR-0012)
+        background: 'var(--surface-overlay)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -179,7 +177,7 @@ export function MarkComposer({
             resize: 'vertical',
             width: '100%',
             padding: 8,
-            borderRadius: 8,
+            borderRadius: 'var(--r-8)',
             border: '1px solid rgba(255,255,255,0.10)',
             background: 'rgba(0,0,0,0.30)',
             color: 'var(--ink-1, #E6EAF2)',

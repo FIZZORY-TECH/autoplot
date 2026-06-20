@@ -86,22 +86,22 @@ function ActionButton({
       {tip && (
         <div
           aria-hidden
+          className="popover-enter"
           style={{
             position: 'fixed',
             top: tip.y,
             left: tip.x,
             transform: 'translateX(-50%)',
-            zIndex: 100,
+            zIndex: 'var(--z-popover)',
             background: 'var(--bg-2)',
-            border: '1px solid var(--hairline)',
             borderRadius: 'var(--r-4)',
-            padding: '4px 8px',
+            padding: '3px 6px',
             fontFamily: 'var(--font-sans)',
             fontSize: 'var(--fs-mono-sm)',
             color: 'var(--ink-1)',
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
-            boxShadow: '0 4px 12px -4px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 16px -4px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06) inset',
           }}
         >
           {tip.text}
@@ -120,7 +120,7 @@ export function Actions({ onResetView }: ActionsProps): JSX.Element {
         position: 'fixed',
         top: 'var(--sp-16)',
         right: 'var(--sp-22)',
-        zIndex: 21,
+        zIndex: 'var(--z-chrome)',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 'var(--sp-6)',

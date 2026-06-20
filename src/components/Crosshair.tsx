@@ -68,7 +68,7 @@ export function Crosshair({ state, bars, layout }: CrosshairProps): JSX.Element 
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        zIndex: 5,
+        zIndex: 'var(--z-chart-crosshair)',
       }}
     >
       {/* Vertical hairline */}

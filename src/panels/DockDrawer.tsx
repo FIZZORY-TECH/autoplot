@@ -37,7 +37,7 @@ import { RESERVE_TOP, RESERVE_BOTTOM } from '../lib/layout';
 // Drawer tier: above the chart, below modals. IndicatorPanel uses 35/34; the
 // dock-panel tier lives just under that at 34 so wrapped panels sit beside the
 // chart without covering modals (MarkComposer z=50, AddAsset scrim z=60).
-const DRAWER_Z = 34;
+const DRAWER_Z = 'var(--z-drawer)';
 
 // Slightly > the 220ms exit keyframe so children always eventually unmount even
 // if `animationend` never fires (reduced motion / display quirks).

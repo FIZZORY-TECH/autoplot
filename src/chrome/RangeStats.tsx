@@ -114,18 +114,18 @@ export function RangeStats({ range, bars, layout, view, onClear }: RangeStatsPro
 
   return (
     <div
-      className="glass"
+      className="glass overlay-enter"
       style={{
         position: 'absolute',
         left: clampedLeft,
         top: cardTop,
         width: cardWidth,
-        padding: 'var(--sp-8) var(--sp-12)',
+        padding: 'var(--sp-6) var(--sp-10)',
         fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
         fontSize: 11,
         fontVariantNumeric: 'tabular-nums',
         lineHeight: 1.6,
-        zIndex: 30,
+        zIndex: 'var(--z-chart-hud)',
         userSelect: 'none',
         pointerEvents: 'auto',
       }}

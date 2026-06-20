@@ -253,15 +253,14 @@
   background: color-mix(in oklab, var(--bg-0) 65%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 50;
+  z-index: var(--z-modal);
   display: flex; align-items: center; justify-content: center;
   animation: agents-in 280ms var(--ease);
 }
 .firstrun-card {
   width: 420px;
   max-width: calc(100vw - 36px);
-  border-radius: 22px;
-  border: 1px solid var(--hairline);
+  border-radius: var(--r-22);
   background:
     radial-gradient(120% 80% at 100% 0%, oklch(0.82 0.14 215 / 0.10), transparent 60%),
     radial-gradient(120% 80% at 0% 100%, oklch(0.78 0.18 320 / 0.08), transparent 60%),
@@ -269,8 +268,8 @@
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
   box-shadow: var(--shadow-glass);
-  padding: 22px 22px 18px;
-  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 20px 16px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 .firstrun-title {
   font-size: 16px;
@@ -336,15 +335,15 @@
   background: color-mix(in oklab, var(--bg-0) 65%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 60;
+  z-index: var(--z-modal-scrim);
   display: flex; align-items: center; justify-content: center;
 }
 .bypass-dialog {
   width: 380px;
-  padding: 20px;
+  padding: 16px;
   background: var(--bg-1);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
+  border-radius: var(--r-22);
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,.45);
   font-size: 13px;
   color: var(--ink-1);
   display: flex; flex-direction: column; gap: 12px;
@@ -354,7 +353,7 @@
 .bypass-dialog button {
   background: transparent;
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-12);
   padding: 6px 12px;
   color: var(--ink-1);
   font-size: 12px;
@@ -717,7 +716,7 @@
      Headline sits at top: var(--sp-22); 92px clears the two-line readout. */
   top: calc(var(--sp-22) + 92px);
   left: calc(var(--chart-left-edge) + var(--sp-22));
-  z-index: 13;
+  z-index: var(--z-chart-hud);
   pointer-events: none;
 }
 .legend-hud {
@@ -1120,7 +1119,7 @@
 .terminal-start-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 1; /* local stacking within terminal panel — not a global tier */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1171,7 +1170,7 @@
 /* "Try asking" hint card — dismissible glass card listing 3 prompts. */
 .terminal-start-hint {
   width: min(360px, 100%);
-  padding: var(--sp-12) var(--sp-16);
+  padding: var(--sp-8) var(--sp-12);
   border-radius: var(--r-14);
 }
 .terminal-start-hint-head {

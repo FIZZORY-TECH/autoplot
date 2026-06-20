@@ -1040,7 +1040,7 @@ export function ChartCanvas({
                   lineHeight: 1.4,
                   color: 'var(--ink-1, #E6EAF2)',
                   whiteSpace: 'pre-wrap',
-                  zIndex: 5,
+                  zIndex: 'var(--z-chart-crosshair)',
                   boxShadow: '0 12px 28px rgba(0,0,0,0.45)',
                 }}
               >

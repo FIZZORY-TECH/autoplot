@@ -16,11 +16,11 @@ const containerStyle: CSSProperties = {
   position: 'fixed',
   top: 16,
   right: 16,
-  zIndex: 50,
+  zIndex: 'var(--z-banner)',
   display: 'flex',
   alignItems: 'center',
   gap: 6,
-  padding: '6px 12px',
+  padding: '4px 10px',
   borderRadius: 'var(--r-pill)',
   // --warn carries the semantic "attention, not error" weight per tokens.css §01.
   color: 'var(--warn)',
@@ -65,7 +65,7 @@ export function MockBadge() {
 
   return (
     <div
-      className="glass-strong"
+      className="glass-strong popover-enter"
       style={containerStyle}
       role="status"
       aria-live="polite"

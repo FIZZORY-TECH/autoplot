@@ -439,7 +439,7 @@ export function Dock(): JSX.Element {
         top: RESERVE_TOP,
         bottom: RESERVE_BOTTOM,
         width: 'var(--toolbar-w)',
-        zIndex: 30,
+        zIndex: 'var(--z-dock)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',

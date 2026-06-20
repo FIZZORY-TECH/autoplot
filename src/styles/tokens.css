@@ -60,6 +60,17 @@
   --hairline:   color-mix(in oklab, white 8%, transparent);
   --hairline-2: color-mix(in oklab, white 14%, transparent);
 
+  /* Over-content surface opacity — for floating surfaces that sit OVER content
+     (menus, popovers, modal cards, dock flyout) and must stay readable.
+     AMBIENT docked surfaces keep the translucent --glass* tints; only
+     over-content overlays use --surface-overlay*. These set FILL only — keep
+     the existing backdrop-filter blur so the surface still reads as frosted
+     glass. See ADR-0012. */
+  --surface-overlay:        color-mix(in oklab, var(--bg-1) 90%, transparent);
+  --surface-overlay-strong: color-mix(in oklab, var(--bg-1) 94%, transparent);
+  --scrim:                  color-mix(in oklab, black 45%, transparent);
+  --scrim-strong:           color-mix(in oklab, black 55%, transparent);
+
   /* Signal · semantic accents */
   --up:     oklch(0.78 0.16 150);
   --down:   oklch(0.70 0.20 25);
@@ -95,8 +106,11 @@
   --sp-4:   4px;
   --sp-6:   6px;
   --sp-8:   8px;
+  --sp-10: 10px;
   --sp-12: 12px;
+  --sp-14: 14px;
   --sp-16: 16px;
+  --sp-18: 18px;
   --sp-22: 22px;
   --sp-32: 32px;
   --sp-56: 56px;
@@ -148,6 +162,26 @@
   --chart-left-edge: var(--toolbar-w);
   --reserve-left:  0px;
   --reserve-right: 0px;
+
+  /* ---------- Z-INDEX SCALE — the single source of truth for stacking order.
+     NEVER hardcode a z-index anywhere else; always use var(--z-*).
+     Tiers are spaced by 100 to leave room for insertion. The chart's internal
+     tiers (10/20/30) are LOCAL: the chart wrapper is isolated (isolation:isolate)
+     so they only order chart floats among themselves and never compete with shell
+     chrome (100+). See ADR-0012. ---------- */
+  --z-base:         0;
+  --z-chart-crosshair: 10;
+  --z-chart-hud:    20;
+  --z-chart-panel:  30;
+  --z-chrome:      100;
+  --z-dock:        200;
+  --z-drawer:      300;
+  --z-rail:        400;
+  --z-banner:      500;
+  --z-popover:     600;
+  --z-modal-scrim: 700;
+  --z-modal:       800;
+  --z-toast:      1000;
 }
 
 /* ===== Global element defaults ===== */

@@ -581,8 +581,8 @@ export function AlpacaCredentialsModal({
   const scrimStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    zIndex: 65, // above AddAssetModal (60)
-    background: 'color-mix(in oklab, black 30%, transparent)',
+    zIndex: 'var(--z-modal-scrim)', // above AddAssetModal scrim; stronger fill makes the dim visible
+    background: 'var(--scrim-strong)',
     backdropFilter: 'blur(18px) saturate(120%)',
     WebkitBackdropFilter: 'blur(18px) saturate(120%)',
     display: 'grid',
@@ -595,13 +595,12 @@ export function AlpacaCredentialsModal({
     width: 'min(460px, 92vw)',
     display: 'flex',
     flexDirection: 'column',
-    background: 'color-mix(in oklab, var(--bg-1) 72%, transparent)',
-    border: '1px solid var(--hairline-2)',
+    background: 'var(--surface-overlay)',
     borderRadius: 'var(--r-22)',
     overflow: 'hidden',
     boxShadow: saved
-      ? '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 60px 120px -30px color-mix(in oklab, black 80%, transparent), 0 0 0 1px color-mix(in oklab, var(--emerald) 50%, transparent), 0 0 56px color-mix(in oklab, var(--emerald) 30%, transparent)'
-      : '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
+      ? '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent), 0 0 0 1px color-mix(in oklab, var(--emerald) 50%, transparent), 0 0 56px color-mix(in oklab, var(--emerald) 30%, transparent)'
+      : '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
     backdropFilter: 'blur(40px) saturate(180%)',
     WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     animation: 'addmodal-in 360ms var(--ease-spring)',
@@ -669,7 +668,7 @@ export function AlpacaCredentialsModal({
             alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: 'var(--sp-12)',
-            padding: 'var(--sp-16) var(--sp-22)',
+            padding: 'var(--sp-14) var(--sp-18)',
             borderBottom: '1px solid var(--hairline)',
           }}
         >
@@ -762,7 +761,7 @@ export function AlpacaCredentialsModal({
         {/* Form body */}
         <div
           style={{
-            padding: 'var(--sp-22)',
+            padding: 'var(--sp-18)',
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--sp-16)',

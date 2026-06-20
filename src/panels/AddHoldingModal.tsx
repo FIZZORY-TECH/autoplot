@@ -334,7 +334,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
           gap: 10,
           padding: '0 12px',
           height: ROW_HEIGHT,
-          borderRadius: 8,
+          borderRadius: 'var(--r-8)',
           cursor: 'pointer',
           boxSizing: 'border-box',
           transition: 'background var(--t-fast)',
@@ -414,8 +414,8 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
   const scrimStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    zIndex: 60,
-    background: 'color-mix(in oklab, black 30%, transparent)',
+    zIndex: 'var(--z-modal-scrim)',
+    background: 'var(--scrim)',
     backdropFilter: 'blur(18px) saturate(120%)',
     WebkitBackdropFilter: 'blur(18px) saturate(120%)',
     display: 'grid',
@@ -429,12 +429,11 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
     maxHeight: '84vh',
     display: 'flex',
     flexDirection: 'column',
-    background: 'color-mix(in oklab, var(--bg-1) 72%, transparent)',
-    border: '1px solid var(--hairline-2)',
+    background: 'var(--surface-overlay)',
     borderRadius: 'var(--r-22)',
     overflow: 'hidden',
     boxShadow:
-      '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
+      '0 1px 0 0 color-mix(in oklab, white 8%, transparent) inset, 0 24px 60px -16px rgba(0,0,0,.6), 0 60px 120px -30px color-mix(in oklab, black 80%, transparent)',
     backdropFilter: 'blur(40px) saturate(180%)',
     WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     animation: 'addholdingmodal-in 360ms var(--ease-spring)',
@@ -477,7 +476,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: 'var(--sp-16) var(--sp-22)',
+              padding: 'var(--sp-14) var(--sp-18)',
               borderBottom: '1px solid var(--hairline)',
             }}
           >
@@ -521,7 +520,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
                   display: 'flex',
                   alignItems: 'center',
                   gap: 'var(--sp-12)',
-                  padding: 'var(--sp-12) var(--sp-22)',
+                  padding: 'var(--sp-10) var(--sp-18)',
                   borderBottom: '1px solid var(--hairline)',
                   color: 'var(--ink-3)',
                 }}
@@ -565,7 +564,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
                   style={{
                     display: 'flex',
                     gap: 8,
-                    padding: '10px 22px 10px',
+                    padding: '8px 18px',
                     borderBottom: '1px solid var(--hairline)',
                     flexWrap: 'wrap',
                   }}
@@ -632,7 +631,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
                       <div
                         style={{
                           height: ROW_HEIGHT,
-                          borderRadius: 8,
+                          borderRadius: 'var(--r-8)',
                           background: 'color-mix(in oklab, var(--bg-1) 40%, transparent)',
                           marginBottom: 2,
                         }}
@@ -688,7 +687,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
                     fontSize: 10,
                     color: 'var(--ink-3)',
                     letterSpacing: '0.04em',
-                    padding: '6px 22px',
+                    padding: '5px 18px',
                     borderBottom: '1px solid var(--hairline)',
                   }}
                 >
@@ -704,7 +703,7 @@ export function AddHoldingModal({ open, editHolding, onClose }: AddHoldingModalP
               display: 'flex',
               flexDirection: 'column',
               gap: 'var(--sp-12)',
-              padding: 'var(--sp-16) var(--sp-22)',
+              padding: 'var(--sp-14) var(--sp-18)',
               overflowY: 'auto',
             }}
           >

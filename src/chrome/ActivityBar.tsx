@@ -34,7 +34,7 @@ import { RESERVE_TOP, RESERVE_BOTTOM } from '../lib/layout';
 
 // Rail tier: at/above the drawer tier (DockDrawer DRAWER_Z=34) so the rail stays
 // clickable beside an open drawer.
-const RAIL_Z = 35;
+const RAIL_Z = 'var(--z-rail)';
 
 // Ordered icon lists per side (mirrors useDockStore.SIDE; the order here is the
 // rail's visual + roving-focus order).

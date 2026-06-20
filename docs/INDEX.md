@@ -32,6 +32,8 @@ Scan-in-10-seconds map of every documentation artifact in this repo. Each entry 
 - [docs/adr/0006-terminal-pty-mode.md](adr/0006-terminal-pty-mode.md) — PTY Terminal mode design. *Read when:* touching `src/terminal/` or `src-tauri/src/commands/terminal.rs`.
 - [docs/adr/0007-app-mcp-bridge.md](adr/0007-app-mcp-bridge.md) — App MCP bridge + `autoplot-mcp` sidecar. *Read when:* touching `src-tauri/src/ipc_bridge.rs`, sidecar tools, or `MCPConsentToast`.
 - [docs/adr/0008-equities-provider.md](adr/0008-equities-provider.md) — Equities provider union widening (Alpaca) + provider-mandatory-in-WHERE invariant. *Read when:* adding a new provider, touching `AssetClass`/`Provider` unions, or querying `bars`/`marks`/`watchlist`/`trends`.
+- [docs/adr/0011-activity-bar-drawer-dock.md](adr/0011-activity-bar-drawer-dock.md) — Activity-bar + drawer dock replacing floating panels; `useDockStore` single source of truth; chart inset via reserve vars; `mountOnOpen` policy. *Read when:* touching `src/chrome/ActivityBar.tsx`, `src/panels/DockDrawer.tsx`, `useDockStore`, or chart-inset layout.
+- [docs/adr/0012-overlay-layering-and-legibility.md](adr/0012-overlay-layering-and-legibility.md) — Z-index token scale (`--z-*`) + over-content opacity tokens (`--surface-overlay*`, `--scrim*`); chart wrapper `isolation: isolate`; `.glass-card` deprecated for over-content use. *Read when:* adding a new overlay, popover, modal, or tooltip; setting any z-index; or choosing a surface fill for a float over the chart.
 
 ## docs/reference/
 - [docs/reference/tauri-ipc.md](reference/tauri-ipc.md) — Tauri IPC contract (commands, payloads, error shapes). *Read when:* adding or calling an `invoke()`.

@@ -186,7 +186,7 @@
   background: color-mix(in oklab, var(--bg-0) 80%, transparent);
   backdrop-filter: blur(16px);
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--r-8);
   border: 1px solid var(--hairline);
   opacity: 0;
   pointer-events: none;
@@ -207,7 +207,7 @@
    Both pseudos are on .dock-btn .glabel--top, not on --rail.
    z-index: 2 ensures it paints above sibling flyout orbs. */
 .dock-btn .glabel--top {
-  z-index: 2;
+  z-index: 2; /* local stacking among flyout siblings */
 }
 .dock-btn .glabel--top::after,
 .dock-btn .glabel--top::before {
@@ -267,17 +267,19 @@
    `.dock-group__flyout-orbs` inside holds the HORIZONTAL ROW of sibling orbs,
    extending rightward per the approved plan/mockup. */
 .dock-group__flyout {
-  /* Transparent panel — no fill, no blur, no shadow, no border. */
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  /* Frosted fill so orb labels are legible over the chart (Dimension B).
+     Surface uses --surface-overlay (bg-1 90%) — consistent with other
+     glass treatments in this file. */
+  background: var(--surface-overlay);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,.5);
+  border-radius: var(--r-14);
   position: absolute;
   top: 50%;
   left: calc(100% + var(--sp-8));
   transform: translateY(-50%) translateX(-6px);
-  z-index: 1;
+  z-index: 1; /* local stacking among flyout siblings */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -456,6 +458,35 @@
 }
 
 /* =============================================================
+   Reusable overlay entrance utilities
+   - overlay-pop  → centered / anchored surfaces (modals, palette,
+                    info panel, mark composer). Add className="overlay-enter".
+   - overlay-rise → top-anchored popovers, tooltips, menus, banners.
+                    Add className="popover-enter".
+   Duration uses --t-fast (180ms); easing uses --ease (cubic-bezier
+   0.22,1,0.36,1 — a fast ease-out). Transforms are kept tiny so the
+   motion reads as refined, not bouncy.
+   ============================================================= */
+
+@keyframes overlay-pop {
+  from { opacity: 0; transform: scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes overlay-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.overlay-enter {
+  animation: overlay-pop var(--t-fast) var(--ease) both;
+}
+
+.popover-enter {
+  animation: overlay-rise var(--t-fast) var(--ease) both;
+}
+
+/* =============================================================
    prefers-reduced-motion — disable shimmer + aurora rotation,
    keep crisp transitions. Per Design System §06 principle 05
    (live data fades — never slides), still-images for ambient
@@ -499,6 +530,14 @@
   /* Toolbar dock-in — opacity-only fallback; suppress the translateX slide. */
   .dock--toolbar {
     animation-name: dock-in-reduced !important;
+  }
+
+  /* Overlay entrance utilities — disable transforms; content stays fully
+     visible (opacity:1) so nothing is hidden when motion is off. */
+  .overlay-enter,
+  .popover-enter {
+    animation: none !important;
+    opacity: 1;
   }
 }
 

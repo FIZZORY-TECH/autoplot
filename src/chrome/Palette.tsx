@@ -286,7 +286,7 @@ function SkeletonRow(): JSX.Element {
         style={{
           width: 110,
           height: 14,
-          borderRadius: 4,
+          borderRadius: 'var(--r-4)',
           background: 'color-mix(in oklab, var(--ink-3) 22%, transparent)',
         }}
       />
@@ -294,7 +294,7 @@ function SkeletonRow(): JSX.Element {
         style={{
           flex: 1,
           height: 14,
-          borderRadius: 4,
+          borderRadius: 'var(--r-4)',
           background: 'color-mix(in oklab, var(--ink-3) 14%, transparent)',
         }}
       />
@@ -473,12 +473,12 @@ export function Palette(): JSX.Element | null {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 200,
+        zIndex: 'var(--z-popover)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
         paddingTop: '14vh',
-        background: 'color-mix(in oklab, black 40%, transparent)',
+        background: 'var(--scrim)',
         backdropFilter: 'blur(2px)',
         WebkitBackdropFilter: 'blur(2px)',
       }}
@@ -488,13 +488,14 @@ export function Palette(): JSX.Element | null {
         aria-label="Asset search"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="glass-heavy"
+        className="glass-heavy overlay-enter"
         style={{
           width: 'min(540px, 90vw)',
           maxHeight: '60vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          background: 'var(--surface-overlay)',
         }}
       >
         <div
@@ -502,7 +503,7 @@ export function Palette(): JSX.Element | null {
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--sp-8)',
-            padding: 'var(--sp-12) var(--sp-16)',
+            padding: 'var(--sp-8) var(--sp-12)',
             borderBottom: '1px solid var(--hairline)',
           }}
         >
@@ -564,7 +565,7 @@ export function Palette(): JSX.Element | null {
           aria-label="Assets"
           style={{
             overflowY: 'auto',
-            padding: '6px 4px',
+            padding: '4px 2px',
             flex: 1,
           }}
         >

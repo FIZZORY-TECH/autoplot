@@ -1237,7 +1237,8 @@ export default function AppShell() {
       <Palette />
 
       {/* P2.4 — Indicator Panel: right-edge slide-in for MA/BB toggles + custom series.
-           Rendered above other panels but below modals (z-index 40 inside). */}
+           Renders at the drawer/chrome tier below modals, per the --z-* token scale
+           defined in tokens.css (see ADR-0012). No z-index is set inline here. */}
       <IndicatorPanel />
 
       {/* P3.2 — Asset Panel + Add modal. AssetPanel writes --reserve-left so
@@ -1284,6 +1285,10 @@ export default function AppShell() {
           // Spring the inset on open/close. Gated on prefers-reduced-motion
           // since this is an inline style the global CSS block can't reach.
           transition: chartInsetTransition,
+          // Stacking-context isolation: chart children (Crosshair, RangeStats,
+          // OverlayInfoPanel) use --z-chart-* tokens and are ordered locally;
+          // they never compete with the global Dock or modal tiers.
+          isolation: 'isolate',
         }}
       >
         <ChartCanvas
