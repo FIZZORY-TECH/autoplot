@@ -15,7 +15,9 @@ import { isMockForced } from '../data/providerRegistry';
 const containerStyle: CSSProperties = {
   position: 'fixed',
   top: 16,
-  right: 16,
+  // Clear the full-height right rail so its topmost icon stays clickable.
+  // Shared with .toast-host via the --corner-safe-right token.
+  right: 'var(--corner-safe-right)',
   zIndex: 'var(--z-banner)',
   display: 'flex',
   alignItems: 'center',

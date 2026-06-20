@@ -171,6 +171,11 @@
   --chart-left-edge: var(--toolbar-w);
   --reserve-left:  0px;
   --reserve-right: 0px;
+  /* Corner-safe right inset: clears the right rail so fixed top/bottom-corner
+     overlays above --z-rail (toasts, the mock-data badge) don't cover the rail's
+     end icons now that rails run full-height (RESERVE_TOP/BOTTOM = 0). One source
+     of truth — moves with --rail-w. */
+  --corner-safe-right: calc(var(--rail-w) + var(--sp-16));
 
   /* ---------- Z-INDEX SCALE — the single source of truth for stacking order.
      NEVER hardcode a z-index anywhere else; always use var(--z-*).

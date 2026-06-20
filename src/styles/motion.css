@@ -68,14 +68,10 @@
   to   { transform: translateX(0);     opacity: 1; }
 }
 
-/* Flush-corner rule: static toolbar (left-edge bar) has square left corners
-   and rounded right (chart-facing) corners only. Applied via .dock--toolbar.
-   No background/border/blur — the toolbar root is fully transparent. */
+/* Flush-corner rule: toolbar runs full-height against the left viewport edge —
+   all corners square. No background/border/blur — the toolbar root is fully transparent. */
 .dock--toolbar {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-top-right-radius: var(--r-12);
-  border-bottom-right-radius: var(--r-12);
+  border-radius: 0;
   /* Explicitly transparent: overrides any cascade that might re-introduce a fill. */
   background: transparent !important;
   backdrop-filter: none !important;
@@ -385,16 +381,11 @@
   -webkit-backdrop-filter: blur(28px) saturate(160%);
 }
 
-/* Flush-edge corners: the rail-adjacent edge is square (docked, not floating);
-   only the chart-facing corners keep the glass radius. Two-class specificity
-   intentionally beats .glass-strong's all-corner radius. */
-.dock-drawer.dock-drawer--left {
-  border-top-left-radius: 0; border-bottom-left-radius: 0;
-  border-top-right-radius: var(--r-14); border-bottom-right-radius: var(--r-14);
-}
+/* Full-height flush: drawers now run top:0 → bottom:0 so all corners are
+   square against the viewport edges. Override .glass-strong's all-corner radius. */
+.dock-drawer.dock-drawer--left,
 .dock-drawer.dock-drawer--right {
-  border-top-right-radius: 0; border-bottom-right-radius: 0;
-  border-top-left-radius: var(--r-14); border-bottom-left-radius: var(--r-14);
+  border-radius: 0;
 }
 
 /* Headline tick flash — a 1px underline that briefly appears under

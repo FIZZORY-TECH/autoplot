@@ -1262,9 +1262,6 @@ export default function AppShell() {
         setHiddenOverlayIds={setHiddenOverlayIds}
       />
 
-      {/* P2.1 — Actions: top-right glass button cluster */}
-      <Actions onResetView={resetView} />
-
       {/* Chart canvas */}
       <div
         ref={chartWrapRef}
@@ -1344,6 +1341,8 @@ export default function AppShell() {
           provider={activeProvider}
           noBars={bars.length === 0}
         />
+        {/* P2.1 — Actions: top-right glass button cluster, chart-scoped. */}
+        <Actions onResetView={resetView} />
       </div>
 
       {/* P2.2 — Dock: bottom-center glass capsule with chart-type toggle,

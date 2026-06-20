@@ -117,10 +117,10 @@ export function Actions({ onResetView }: ActionsProps): JSX.Element {
   return (
     <div
       style={{
-        position: 'fixed',
+        position: 'absolute',
         top: 'var(--sp-16)',
         right: 'var(--sp-22)',
-        zIndex: 'var(--z-chrome)',
+        zIndex: 'var(--z-chart-panel)',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 'var(--sp-6)',

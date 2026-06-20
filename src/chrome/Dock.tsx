@@ -450,8 +450,8 @@ export function Dock(): JSX.Element {
         // Transparent — no glass fill, no blur, no shadow. The toolbar is an
         // invisible gutter; individual orbs carry all surface treatment.
         background: 'transparent',
-        // Square left edge (flush to window); rounded right (chart-facing) corners.
-        borderRadius: '0 var(--r-12) var(--r-12) 0',
+        // Full-height flush: toolbar runs top:0 → bottom:0 against the viewport edge — all corners square.
+        borderRadius: 0,
         animation: 'dock-in 800ms var(--ease) backwards',
         userSelect: 'none',
         // overflow MUST be visible (both axes) so each group's flyout can fly
@@ -466,7 +466,7 @@ export function Dock(): JSX.Element {
           Hairline divider is rendered as a ::after pseudo-element in CSS
           (.dock-group--collapsible:not(:last-child)::after) so it stays
           out of the flex-gap math and the first-icon y aligns with the right
-          rail (both start at RESERVE_TOP + --sp-12). */}
+          rail (both start at --sp-12 from the top edge; RESERVE_TOP is 0). */}
       <DockGroup<ChartType>
         name="chart-type"
         ariaLabel="Chart type"

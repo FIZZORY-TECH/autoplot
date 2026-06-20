@@ -3,7 +3,9 @@
 .toast-host {
   position: fixed;
   top: 16px;
-  right: 16px;
+  /* Clear the full-height right rail (shared --corner-safe-right token) so toasts
+     don't stack over the rail's topmost icon. */
+  right: var(--corner-safe-right);
   display: flex;
   flex-direction: column;
   gap: 8px;

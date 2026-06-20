@@ -7,11 +7,13 @@
  * useDockStore.ts (RAIL_W). Import from here instead of redeclaring.
  */
 
-/** Reserved top chrome strip height (px) — the chart container's top inset. */
-export const RESERVE_TOP = 80;
+/** Side-rail / drawer top offset (px). 0 = rails and drawers run full-height
+ *  (top:0 to bottom:0). Distinct from CHART_RESERVE_TOP (the chart's own inset). */
+export const RESERVE_TOP = 0;
 
-/** Reserved bottom chrome strip height (px) — the chart container's bottom inset. */
-export const RESERVE_BOTTOM = 80;
+/** Side-rail / drawer bottom offset (px). 0 = rails and drawers run full-height
+ *  (top:0 to bottom:0). Distinct from CHART_RESERVE_BOTTOM (the chart's own inset). */
+export const RESERVE_BOTTOM = 0;
 
 /** Chart wrapper top inset (px) — chart fills to the top; the floating headline overlays it.
  *  Distinct from RESERVE_TOP, which is used by the side rails and drawers. */
