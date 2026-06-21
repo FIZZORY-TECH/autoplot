@@ -1505,7 +1505,7 @@ export function ChartCanvas({
         <span data-testid="chart-skeleton-baseline" hidden />
       )}
 
-      <Crosshair state={crosshair} bars={bars} layout={layout} />
+      <Crosshair state={crosshair} bars={bars} layout={layout} timeframe={tf ?? '1h'} />
 
       {/* P2.5 — Comment hover popovers + invisible hit targets for hover detect.
           Only Comment marks (note != null) get a popover; plain Marks have a

@@ -85,6 +85,42 @@ test.describe('Floating-readout precedence — at most one readout at a time', (
     await suppressFirstRun(page);
   });
 
+  test('(c) hovering a normal bar shows the crosshair readout with Change block labels', async ({
+    page,
+  }) => {
+    // Move to the center of the canvas — away from any event notch.
+    const canvasRect = await page.evaluate(() => {
+      const c = document.querySelector('canvas') as HTMLCanvasElement | null;
+      if (!c) return null;
+      const r = c.getBoundingClientRect();
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
+    });
+    if (!canvasRect) {
+      test.skip(true, 'Canvas not found');
+      return;
+    }
+    const cx = canvasRect.left + canvasRect.width * 0.5;
+    const cy = canvasRect.top + canvasRect.height * 0.45;
+    await page.mouse.move(cx, cy);
+    await page.waitForTimeout(300);
+
+    // The crosshair readout should appear (we're not over an event or popover).
+    const readout = page.getByTestId('crosshair-readout');
+    await expect(readout, 'crosshair readout visible on normal bar hover').toBeVisible({
+      timeout: 2000,
+    });
+
+    // The Change block label "vs O" must be present — confirms new structure rendered.
+    await expect(readout, 'readout contains "vs O" change label').toContainText('vs O');
+
+    // A +/- value pattern or the Δ prev label should also appear for bars after idx 0.
+    // We check for the Rng label as a stable proxy for the Range/Vol block.
+    await expect(readout, 'readout contains "Rng" range label').toContainText('Rng');
+
+    // C label in the demoted OHLC block confirms the full block is rendered.
+    await expect(readout, 'readout contains demoted OHLC "C" label').toContainText('C');
+  });
+
   test('(b) hovering an event column hides the price chip and shows the event hint', async ({
     page,
   }) => {
