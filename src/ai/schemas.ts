@@ -250,6 +250,9 @@ export const EventMarkElement = z.object({
   ts_end: z.number().optional(),
   label: z.string(),
   color: z.string().optional(),
+  content: z.string().max(4000).optional(),
+  source_url: z.string().url().optional(),
+  source_name: z.string().max(80).optional(),
 });
 export type EventMarkElement = z.infer<typeof EventMarkElement>;
 

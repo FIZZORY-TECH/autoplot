@@ -6,12 +6,17 @@
  * outer wrapper. Mirrors the prototype's behavior in
  * `app-design/project/chart.jsx`:
  *
- *   - mouse drag-pan
+ *   - drag-pan (mouse or 1 finger)
  *   - scroll-zoom anchored at cursor
  *   - shift+drag → emit range-select event (visual band drawn by P2.6)
- *   - 1-finger pan
- *   - 2-finger pinch zoom around midpoint
+ *   - 2-pointer pinch zoom around midpoint
  *   - tap-to-toggle crosshair (no-movement tap)
+ *
+ * Phase B — input is unified on the Pointer Events model: a single
+ * `onPointerDown/Move/Up/Cancel` family backed by a `Map<pointerId,
+ * PointerState>` registry replaces the old split mouse + touch handlers.
+ * Gesture is derived from the number of active pointers (1 = drag/pan/tap,
+ * 2 = pinch). `onWheel` (Phase A) is unchanged.
  *
  * The controller is decoupled from rendering. ChartCanvas owns the DOM and
  * calls back into the controller for state changes (view, crosshair).
@@ -40,6 +45,20 @@ const MAX_WINDOW_MULT = 1.2;
 
 /** Px movement threshold below which a mousedown-mouseup is a tap (no drag). */
 const TAP_PX = 4;
+
+/** Wheel deltaMode normalization — browsers may report wheel deltas in pixels
+ *  (mode 0), lines (mode 1, e.g. Firefox mouse wheel) or pages (mode 2, rare).
+ *  We normalize lines/pages to a px-equivalent so the pan/zoom routing below
+ *  works in one unit regardless of source. */
+const WHEEL_LINE_PX = 16;
+/** Pages → px. We don't have the viewport bar count here, so use a safe large
+ *  constant; deltaMode===2 is rare in practice. TODO: derive from layout.w. */
+const WHEEL_PAGE_PX = 400;
+
+/** Wheel-pan sensitivity: fraction of the px→bar conversion applied to a
+ *  horizontal wheel delta. Tuned so a one-hand trackpad swipe scrolls time at
+ *  roughly drag-pan speed. */
+const PAN_FACTOR = 1;
 
 /** Range-select event payload — `start`/`end` are bar indices (lo < hi). */
 export interface RangeSelectEvent {
@@ -138,17 +157,19 @@ interface DragState {
   trendAnchor?: { x1Idx: number; y1Price: number };
 }
 
+/** Per-pointer cursor position, tracked in the registry keyed by pointerId. */
+interface PointerState {
+  /** Latest x in CSS px (relative to wrapper). */
+  x: number;
+  /** Latest y in CSS px (relative to wrapper). */
+  y: number;
+}
+
+/** Live pinch state — the previous finger distance feeds an incremental
+ *  `zoomAround` each move, so we only need the last distance, not the anchor. */
 interface PinchState {
-  /** Initial finger distance in px. */
+  /** Finger distance in px on the previous pinch sample (>= 1). */
   dist: number;
-  /** Initial midpoint x in CSS px (relative to wrapper). */
-  cx: number;
-  /** Initial view span (end - start). */
-  span: number;
-  /** Bar index at the midpoint when pinch began. */
-  focusIdx: number;
-  /** Initial view.start. */
-  startStart: number;
 }
 
 /**
@@ -195,17 +216,20 @@ function clampWindow(
 }
 
 export interface InteractionController {
-  /** Bind these to the wrapper element. */
-  onMouseDown: (e: MouseEvent) => void;
-  onMouseMove: (e: MouseEvent) => void;
-  onMouseUp: (e: MouseEvent) => void;
-  onMouseLeave: (e: MouseEvent) => void;
+  /** Bind these to the wrapper element (Pointer Events). */
+  onPointerDown: (e: PointerEvent) => void;
+  onPointerMove: (e: PointerEvent) => void;
+  onPointerUp: (e: PointerEvent) => void;
+  onPointerCancel: (e: PointerEvent) => void;
   onWheel: (e: WheelEvent) => void;
-  onTouchStart: (e: TouchEvent) => void;
-  onTouchMove: (e: TouchEvent) => void;
-  onTouchEnd: (e: TouchEvent) => void;
   /** Returns true when actively pan-dragging — host can flip cursor to grabbing. */
   isPanning: () => boolean;
+  /** True while one or more pointers are captured/active (host suppresses the
+   *  crosshair-clear on pointerleave mid-drag — see ChartCanvas). */
+  hasActivePointer: () => boolean;
+  /** Clear the crosshair on hover-out (replaces the old onMouseLeave). Routes
+   *  through cfg.setCrosshair so the Headline hover-bar is cleared too. */
+  clearCrosshair: () => void;
   /** Cleanup any in-flight drag/pinch state (e.g. on unmount). */
   reset: () => void;
 }
@@ -219,11 +243,13 @@ export function createChartInteraction(
 ): InteractionController {
   let drag: DragState | null = null;
   let pinch: PinchState | null = null;
-  /** Touch-only: tracks whether the current touch is a tap (no movement). */
-  let touchTapStart: { x: number; y: number } | null = null;
+  /** Active pointers keyed by pointerId — gesture is derived from .size. */
+  const pointers = new Map<number, PointerState>();
+  /** Single-pointer-only: tracks whether the current pointer is a tap (no movement). */
+  let tapStart: { x: number; y: number } | null = null;
 
   function relativeXY(
-    e: MouseEvent | Touch,
+    e: { clientX: number; clientY: number },
     target: Element,
   ): { x: number; y: number } {
     const rect = target.getBoundingClientRect();
@@ -255,20 +281,36 @@ export function createChartInteraction(
   }
 
   // -------------------------------------------------------------------------
-  // Mouse handlers
+  // Unified Pointer handlers (Phase B)
+  //
+  // A registry of active pointers keyed by pointerId derives the gesture:
+  //   1 active pointer  → drag / pan / range / trend / tap-to-toggle crosshair
+  //   2 active pointers → pinch zoom around the midpoint (uses zoomAround)
+  // Pointer capture (set on the target in pointerdown) guarantees move/up are
+  // delivered even when the pointer leaves the element mid-drag — so the old
+  // window-level mouseup workaround is no longer needed.
   // -------------------------------------------------------------------------
 
-  function onMouseDown(e: MouseEvent): void {
-    if (e.button !== 0) return;
-    const target = e.currentTarget as Element | null;
-    if (!target) return;
-    const { x, y } = relativeXY(e, target);
+  /** Returns the midpoint + distance of the two currently active pointers. */
+  function pinchGeometry(): { cx: number; cy: number; dist: number } {
+    const it = pointers.values();
+    const a = it.next().value as PointerState;
+    const b = it.next().value as PointerState;
+    return {
+      cx: (a.x + b.x) / 2,
+      cy: (a.y + b.y) / 2,
+      dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+    };
+  }
+
+  /** Begin a single-pointer drag (pan / range / trend) from (x, y). */
+  function beginDrag(x: number, y: number, shiftKey: boolean, button: number): void {
     const view = cfg.getView();
     const layout = cfg.getLayout();
 
-    // Step 4 — Trend tool wins over range/pan when active. Plain mousedown
-    // captures anchor 1; mousemove updates a live draft; mouseup commits.
-    if (cfg.isTrendDragActive?.() && !e.shiftKey) {
+    // Step 4 — Trend tool wins over range/pan when active. Plain pointerdown
+    // captures anchor 1; pointermove updates a live draft; pointerup commits.
+    if (cfg.isTrendDragActive?.() && button === 0 && !shiftKey) {
       const x1Idx = pxToBarX(x, view, layout);
       const y1Price = pxToPrice(y, view, layout);
       drag = {
@@ -286,7 +328,7 @@ export function createChartInteraction(
 
     // P2.2 — Range Scope tool: plain drag triggers range-select when active.
     // Shift+drag also triggers range-select regardless (existing behavior).
-    const isRange = e.shiftKey || (cfg.isRangeDragActive?.() ?? false);
+    const isRange = shiftKey || (cfg.isRangeDragActive?.() ?? false);
     drag = {
       kind: isRange ? 'range' : 'pan',
       startX: x,
@@ -294,16 +336,88 @@ export function createChartInteraction(
       startEnd: view.end,
     };
     if (isRange && cfg.onRangeSelect) {
-      // Clear any committed range until mouseup decides.
+      // Clear any committed range until pointerup decides.
       cfg.onRangeSelect(null);
     }
   }
 
-  function onMouseMove(e: MouseEvent): void {
+  function onPointerDown(e: PointerEvent): void {
     const target = e.currentTarget as Element | null;
     if (!target) return;
     const { x, y } = relativeXY(e, target);
+    pointers.set(e.pointerId, { x, y });
+    // Capture so move/up are delivered even off-element (drag released off-canvas
+    // ends cleanly — replaces the old window mouseup workaround).
+    try {
+      (target as Element & { setPointerCapture?: (id: number) => void }).setPointerCapture?.(
+        e.pointerId,
+      );
+    } catch {
+      // setPointerCapture can throw if the pointer is already gone; ignore.
+    }
+
+    if (pointers.size === 2) {
+      // Second finger down → switch from drag to pinch. Drop any in-flight
+      // single-pointer drag/tap so it doesn't also pan.
+      drag = null;
+      tapStart = null;
+      pinch = { dist: pinchGeometry().dist };
+      return;
+    }
+    if (pointers.size !== 1) return; // 3+ pointers: ignore until back to 1/2.
+
+    // Only the primary button starts a single-pointer drag (mouse: left button;
+    // touch/pen report button 0). Mirrors the old onMouseDown button gate.
+    if (e.button !== 0) return;
+    beginDrag(x, y, e.shiftKey, e.button);
+    tapStart = { x, y };
+  }
+
+  function onPointerMove(e: PointerEvent): void {
+    const target = e.currentTarget as Element | null;
+    if (!target) return;
+    const { x, y } = relativeXY(e, target);
+    const tracked = pointers.get(e.pointerId);
+    if (tracked) {
+      tracked.x = x;
+      tracked.y = y;
+    }
+
+    // Pinch: 2 active pointers → incremental zoomAround the midpoint.
+    if (pointers.size === 2 && pinch) {
+      const { cx, dist } = pinchGeometry();
+      const view = cfg.getView();
+      const layout = cfg.getLayout();
+      const barCount = cfg.getBarCount();
+      const ratio = pinch.dist / dist; // fingers apart (dist↑) ⇒ ratio<1 ⇒ zoom in.
+      pinch.dist = dist;
+      const span = view.end - view.start;
+      const newSpan = Math.max(
+        MIN_WINDOW_BARS,
+        Math.min(barCount * MAX_WINDOW_MULT, span * ratio),
+      );
+      const focusIdx = pxToBarX(cx, view, layout);
+      const zoomed = zoomAround(view, focusIdx, newSpan);
+      const clamped = clampWindow(zoomed.start, zoomed.end, barCount);
+      cfg.setView({
+        start: clamped.start,
+        end: clamped.end,
+        yMin: view.yMin,
+        yMax: view.yMax,
+      });
+      return;
+    }
+
+    // Single pointer (or hover before any down): live crosshair.
     emitCrosshair(x, y);
+
+    // Cancel "tap" if the pointer moved beyond TAP_PX.
+    if (
+      tapStart &&
+      (Math.abs(x - tapStart.x) > TAP_PX || Math.abs(y - tapStart.y) > TAP_PX)
+    ) {
+      tapStart = null;
+    }
 
     if (drag?.kind === 'pan') {
       applyPan(x, drag);
@@ -320,20 +434,79 @@ export function createChartInteraction(
         y2Price,
       });
     }
-    // Range drags: defer band rendering to P2.6; we only emit final range on mouseup.
+    // Range drags: defer band rendering to P2.6; we only emit final range on up.
   }
 
-  function onMouseUp(e: MouseEvent): void {
-    const d = drag;
-    drag = null;
-    if (!d) return;
+  function endPointer(e: PointerEvent): void {
     const target = e.currentTarget as Element | null;
-    if (!target) return;
+    pointers.delete(e.pointerId);
+    try {
+      (target as (Element & { releasePointerCapture?: (id: number) => void }) | null)?.releasePointerCapture?.(
+        e.pointerId,
+      );
+    } catch {
+      // already released / gone — ignore.
+    }
+    // Pinch needs 2 pointers; lifting one ends the pinch. A remaining pointer
+    // does NOT resume a drag (it was never tracked as a drag) — matches the old
+    // touch behavior where lifting one of two fingers stopped interaction.
+    if (pointers.size < 2) pinch = null;
+  }
+
+  function onPointerUp(e: PointerEvent): void {
+    const d = drag;
+    const tap = tapStart;
+    const wasPinch = pointers.size === 2 && !!pinch;
+    endPointer(e);
+
+    // Pinch release — no tap/click semantics.
+    if (wasPinch) {
+      drag = null;
+      tapStart = null;
+      return;
+    }
+
+    drag = null;
+    tapStart = null;
+
+    const target = e.currentTarget as Element | null;
+    if (!target || typeof target.getBoundingClientRect !== 'function') return;
     const { x, y } = relativeXY(e, target);
+
+    // Tap-to-toggle crosshair: a touch/pen tap whose total movement stayed under
+    // the tap threshold toggles the crosshair on release. Mouse is EXCLUDED —
+    // mouse clicks fall through to ChartCanvas's onChartClick path (mark
+    // composer / event-hotspot popover / trend deselect), and the mouse
+    // crosshair already tracks hover continuously, so toggling it on click would
+    // be a regression. This matches the pre-Phase-B split where only the touch
+    // path toggled the crosshair.
+    const isTouchLike = e.pointerType !== 'mouse';
+    if (
+      isTouchLike &&
+      d &&
+      tap &&
+      !(Math.abs(x - tap.x) > TAP_PX || Math.abs(y - tap.y) > TAP_PX)
+    ) {
+      // Trend draft started on this same tap must be cleared (cancelled draw)
+      // below; the crosshair toggle still applies for pan/range taps.
+      if (d.kind === 'trend' && d.trendAnchor) {
+        cfg.setTrendDraft?.(null);
+        return;
+      }
+      const visible = cfg.isCrosshairVisible?.() ?? true;
+      if (visible) {
+        cfg.setCrosshair(null);
+      } else {
+        emitCrosshair(tap.x, tap.y);
+      }
+      return;
+    }
+
+    if (!d) return;
     const moved = Math.abs(x - d.startX) > TAP_PX;
 
-    // Step 4 — Trend tool: commit on mouseup if the user actually dragged.
-    // A no-movement click clears the draft (treated as a cancelled draw).
+    // Step 4 — Trend tool: commit on pointerup if the user actually dragged.
+    // A no-movement release clears the draft (treated as a cancelled draw).
     if (d.kind === 'trend' && d.trendAnchor) {
       cfg.setTrendDraft?.(null);
       if (moved && cfg.commitTrend) {
@@ -366,8 +539,15 @@ export function createChartInteraction(
     }
   }
 
-  function onMouseLeave(_e: MouseEvent): void {
-    cfg.setCrosshair(null);
+  function onPointerCancel(e: PointerEvent): void {
+    // Aborted gesture (e.g. OS gesture takeover) — drop all in-flight state for
+    // this pointer with no tap/commit semantics.
+    endPointer(e);
+    if (pointers.size === 0) {
+      drag = null;
+      tapStart = null;
+      cfg.setTrendDraft?.(null);
+    }
   }
 
   function onWheel(e: WheelEvent): void {
@@ -378,9 +558,34 @@ export function createChartInteraction(
     const view = cfg.getView();
     const layout = cfg.getLayout();
     const barCount = cfg.getBarCount();
+
+    // 1. Normalize deltas for deltaMode FIRST so all routing below is in px.
+    const unit =
+      e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? WHEEL_PAGE_PX : 1;
+    const deltaX = e.deltaX * unit;
+    const deltaY = e.deltaY * unit;
+
+    // 2. ctrlKey ⇒ focal-point zoom (macOS pinch-to-zoom; also Ctrl+wheel).
+    //    3. else horizontal-dominant ⇒ time-axis pan (trackpad swipe).
+    //    4. else (vertical-dominant) ⇒ zoom (plain mouse wheel / vertical swipe).
+    if (!e.ctrlKey && Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Pan: convert px deltaX → bar shift via the same px→bars ratio drag uses
+      // (a rightward swipe / positive deltaX moves the window forward in time).
+      const span = view.end - view.start;
+      const shift = (deltaX / Math.max(1, layout.w)) * span * PAN_FACTOR;
+      const next = clampWindow(view.start + shift, view.end + shift, barCount);
+      cfg.setView({
+        start: next.start,
+        end: next.end,
+        yMin: view.yMin,
+        yMax: view.yMax,
+      });
+      return;
+    }
+
     const focusIdx = pxToBarX(x, view, layout);
     const span = view.end - view.start;
-    const scale = e.deltaY > 0 ? 1.1 : 0.9;
+    const scale = deltaY > 0 ? 1.1 : 0.9;
     const newSpan = Math.max(
       MIN_WINDOW_BARS,
       Math.min(barCount * MAX_WINDOW_MULT, span * scale),
@@ -396,121 +601,23 @@ export function createChartInteraction(
   }
 
   // -------------------------------------------------------------------------
-  // Touch handlers
-  // -------------------------------------------------------------------------
-
-  function onTouchStart(e: TouchEvent): void {
-    const target = e.currentTarget as Element | null;
-    if (!target) return;
-    const view = cfg.getView();
-    if (e.touches.length === 1) {
-      const t = e.touches[0]!;
-      const { x, y } = relativeXY(t, target);
-      drag = { kind: 'pan', startX: x, startStart: view.start, startEnd: view.end };
-      touchTapStart = { x, y };
-    } else if (e.touches.length === 2) {
-      const a = e.touches[0]!;
-      const b = e.touches[1]!;
-      const layout = cfg.getLayout();
-      const aRel = relativeXY(a, target);
-      const bRel = relativeXY(b, target);
-      const dist = Math.hypot(aRel.x - bRel.x, aRel.y - bRel.y);
-      const cx = (aRel.x + bRel.x) / 2;
-      pinch = {
-        dist: Math.max(1, dist),
-        cx,
-        span: view.end - view.start,
-        focusIdx: pxToBarX(cx, view, layout),
-        startStart: view.start,
-      };
-      drag = null;
-      touchTapStart = null;
-    }
-  }
-
-  function onTouchMove(e: TouchEvent): void {
-    e.preventDefault();
-    const target = e.currentTarget as Element | null;
-    if (!target) return;
-    const view = cfg.getView();
-    const barCount = cfg.getBarCount();
-
-    if (e.touches.length === 2 && pinch) {
-      const a = e.touches[0]!;
-      const b = e.touches[1]!;
-      const aRel = relativeXY(a, target);
-      const bRel = relativeXY(b, target);
-      const dist = Math.hypot(aRel.x - bRel.x, aRel.y - bRel.y);
-      const ratio = pinch.dist / Math.max(1, dist);
-      const newSpan = Math.max(
-        MIN_WINDOW_BARS,
-        Math.min(barCount * MAX_WINDOW_MULT, pinch.span * ratio),
-      );
-      const r = (pinch.focusIdx - pinch.startStart) / Math.max(1e-9, pinch.span);
-      const start = pinch.focusIdx - r * newSpan;
-      const end = start + newSpan;
-      const clamped = clampWindow(start, end, barCount);
-      cfg.setView({
-        start: clamped.start,
-        end: clamped.end,
-        yMin: view.yMin,
-        yMax: view.yMax,
-      });
-      return;
-    }
-
-    if (e.touches.length === 1 && drag) {
-      const t = e.touches[0]!;
-      const { x, y } = relativeXY(t, target);
-      // Cancel "tap" if the finger moved beyond TAP_PX.
-      if (
-        touchTapStart &&
-        (Math.abs(x - touchTapStart.x) > TAP_PX ||
-          Math.abs(y - touchTapStart.y) > TAP_PX)
-      ) {
-        touchTapStart = null;
-      }
-      // Pan + live crosshair while dragging.
-      emitCrosshair(x, y);
-      applyPan(x, drag);
-    }
-  }
-
-  function onTouchEnd(e: TouchEvent): void {
-    if (pinch && e.touches.length < 2) pinch = null;
-    if (drag && e.touches.length === 0) {
-      // Detect tap (no movement) → toggle crosshair.
-      if (touchTapStart) {
-        const visible = cfg.isCrosshairVisible?.() ?? true;
-        if (visible) {
-          cfg.setCrosshair(null);
-        } else {
-          emitCrosshair(touchTapStart.x, touchTapStart.y);
-        }
-      }
-      drag = null;
-      touchTapStart = null;
-    }
-  }
-
-  // -------------------------------------------------------------------------
   // Public surface
   // -------------------------------------------------------------------------
 
   return {
-    onMouseDown,
-    onMouseMove,
-    onMouseUp,
-    onMouseLeave,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
     onWheel,
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd,
     isPanning: () => drag?.kind === 'pan',
+    hasActivePointer: () => pointers.size > 0,
+    clearCrosshair: () => cfg.setCrosshair(null),
     reset: () => {
       drag = null;
       pinch = null;
-      touchTapStart = null;
+      tapStart = null;
+      pointers.clear();
     },
   };
 }

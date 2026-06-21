@@ -919,6 +919,49 @@
   font-size: 11px;
 }
 
+/* SourceBadge — pill button linking to an event's source URL externally.
+   Sits beside .strat-perf-badge; shares its pill idiom. */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--bg-2);
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);          /* 11px */
+  letter-spacing: var(--tracking-mono-sm);
+  cursor: pointer;
+  /* Flat, no glow — transitions for bg and border only. */
+  transition:
+    background var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+  /* Ensure comfortable minimum touch target height. */
+  min-height: 24px;
+}
+.source-badge:hover {
+  background: var(--tint-hover);
+  border-color: var(--hairline-2);
+  color: var(--ink-0);
+}
+.source-badge:active {
+  background: var(--glass-strong);
+}
+.source-badge:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.source-badge__label {
+  /* inherits mono from parent; truncate long domains gracefully */
+  max-width: 20ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Loading shimmer — replaces the perf row while the backtest runs. */
 .strat-perf-shimmer {
   display: inline-block;
@@ -1511,3 +1554,324 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ===========================================================================
+   EventListPopover (S6) — the CLICK-opened event list over the chart.
+   Floats at --z-popover; flat dark-glass surface (glow retired). Mirrors the
+   OverlayInfoPanel clamp/pin discipline; pointer-events on (it is interactive).
+   =========================================================================== */
+
+.event-popover {
+  background: var(--surface-overlay-strong);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline, color-mix(in oklab, var(--ink-3) 40%, transparent));
+  border-radius: var(--r-12);
+  box-shadow: 0 8px 24px var(--scrim, rgba(0, 0, 0, 0.45));
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.event-popover-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-4, 4px);
+  max-height: inherit;
+  overflow-y: auto;
+  outline: none;
+}
+
+.event-popover-list:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-8);
+}
+
+.event-popover-row {
+  padding: var(--sp-8, 8px) var(--sp-8, 8px);
+  border-radius: var(--r-8);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
+}
+
+.event-popover-row + .event-popover-row {
+  margin-top: 2px;
+}
+
+.event-popover-row.is-selected,
+.event-popover-row:hover {
+  background: var(--tint-hover);
+}
+
+.event-popover-row.is-selected {
+  box-shadow: var(--ring-accent);
+}
+
+.event-popover-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4, 4px);
+}
+
+.event-popover-row-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-8, 8px);
+}
+
+.event-popover-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ink-0);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.event-popover-preview {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event-popover-ts {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);  /* 11px */
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.event-popover-source {
+  margin-top: 2px;
+}
+
+/* Right-aligned expand control. */
+.event-popover-expand {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--r-8);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+.event-popover-expand:hover {
+  color: var(--ink-0);
+  background: var(--glass);
+}
+
+.event-popover-expand:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Error row — inline message, not a crash. */
+.event-popover-error {
+  cursor: default;
+}
+
+.event-popover-error-text {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* Loading skeleton row. */
+.event-popover-skeleton {
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8, 8px);
+}
+
+.event-popover-skel-line {
+  height: 10px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--ink-3) 28%, transparent);
+}
+
+/* ===========================================================================
+   EventReaderModal (S8) — the fullscreen reading surface for one research
+   event. Scrim at --z-modal-scrim over --scrim-strong; card at --z-modal on
+   --surface-overlay-strong. Flat tokens only — depth shadow, NO glow
+   (ADR-0012). Scrim/card transitions are inline (driven by the open phase for
+   spatial continuity); this block owns the static layout + type.
+   =========================================================================== */
+
+.event-reader-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-16);
+  padding: var(--sp-22) var(--sp-22) var(--sp-16);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.event-reader-header-aside {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-10);
+  flex: 0 0 auto;
+}
+
+.event-reader-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-h1);            /* 28px display/headline */
+  letter-spacing: var(--tracking-h1);
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--ink-0);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.event-reader-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+.event-reader-close:hover {
+  color: var(--ink-0);
+  background: var(--tint-hover);
+}
+
+.event-reader-close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.event-reader-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-22);
+}
+
+.event-reader-content {
+  margin: 0 auto;
+  max-width: 68ch;               /* generous reading measure */
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);     /* 13px */
+  line-height: 1.55;
+  color: var(--ink-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.event-reader-footer {
+  flex: 0 0 auto;
+  padding: var(--sp-14) var(--sp-22);
+  border-top: 1px solid var(--hairline);
+}
+
+.event-reader-ts {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);  /* 11px */
+  letter-spacing: var(--tracking-mono-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* ===========================================================================
+   ChartHotspotFocusOverlay (S9) — visually-hidden, keyboard-focusable buttons
+   over each canvas-drawn event-notch cluster.
+
+   These buttons are transparent (opacity:0) by default — they exist only for
+   Tab-reachability and screen-reader announcement. On :focus-visible we show
+   a crisp flat accent ring positioned at the notch so keyboard users get clear
+   visual feedback about which event they are about to open.
+
+   The ring uses --focus-ring (the standardized token, not glow-retired accent).
+   Width/height of 24×24 satisfy the 24px minimum accessible touch target.
+   =========================================================================== */
+
+.chart-hotspot-btn {
+  /* Reset all browser button defaults. */
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  /* Ensure the button is in the tab order and receives keyboard events. */
+  cursor: pointer;
+  /* Flat tokens — no glow, no blur. */
+  border-radius: var(--r-4);
+  /* Focus ring: flat accent inset — only visible on keyboard focus. */
+  outline: none;
+}
+
+.chart-hotspot-btn:focus-visible {
+  /* Show a crisp focus ring so keyboard users can see which notch is focused.
+     opacity is controlled inline (0 normally); focus-visible sets it to 1 so
+     the ring appears even though the button body stays transparent. */
+  opacity: 1 !important;
+  box-shadow: var(--focus-ring);
+  /* A thin accent overlay so the button "glows" exactly where the notch is. */
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+ * DevReseedButton — DEV-ONLY pill to reseed the event/series mock fixture.
+ * Flat dark-glass (no glow per ADR-0011 minimal UI); only the focus ring uses
+ * --focus-ring. Never shipped in production (gated at the React call site).
+ * ------------------------------------------------------------------------- */
+.dev-reseed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--surface-overlay);
+  color: var(--ink-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  letter-spacing: var(--tracking-mono-sm);
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease);
+}
+.dev-reseed-pill:hover {
+  color: var(--ink-0);
+  border-color: var(--hairline-2);
+  background: var(--surface-overlay-strong);
+}
+.dev-reseed-pill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--hairline-2);
+}
+.dev-reseed-pill svg { opacity: 0.85; }

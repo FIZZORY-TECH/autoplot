@@ -54,10 +54,19 @@ export interface HitRegion {
   y: number;
   /** Hit radius for dot kinds (CSS px). Defaults to DOT_RADIUS_PX. */
   r?: number;
-  /** Secondary X for line/rect kinds (CSS px). */
+  /** Secondary X for line/rect/column kinds (CSS px). */
   x2?: number;
-  /** Secondary Y for line/rect kinds (CSS px). */
+  /** Secondary Y for line/rect/column kinds (CSS px). */
   y2?: number;
+  /**
+   * Explicit geometry override (additive — defaults to the kind-derived shape).
+   * `'column'` → an axis-aligned box (x..x2, y..y2) regardless of `kind`. Used by
+   * the event-notch dispatch column: a full-pane-height vertical band at the
+   * event x so a click ANYWHERE at that timestamp resolves the hit (Fitts's law:
+   * a tall target needs no vertical precision). The notch CENTER (for the focus
+   * overlay + guide line) is carried separately on the payload as `cxCenter`.
+   */
+  shape?: 'column';
   kind: HitRegionKind;
   /** Renderer-owned data the info panel will display. Opaque to the substrate. */
   payload: unknown;
@@ -125,6 +134,16 @@ export function distToSegment(
  * - everything else: circle distance, gated by (r ?? DOT_RADIUS_PX).
  */
 export function distanceToRegion(region: HitRegion, px: number, py: number): number {
+  // Explicit column box (event-notch dispatch column): inside x..x2, y..y2 → 0.
+  // A tall full-pane column needs no soft falloff — it's a large target by design.
+  if (region.shape === 'column' && region.x2 !== undefined && region.y2 !== undefined) {
+    const left = Math.min(region.x, region.x2);
+    const right = Math.max(region.x, region.x2);
+    const top = Math.min(region.y, region.y2);
+    const bot = Math.max(region.y, region.y2);
+    return px >= left && px <= right && py >= top && py <= bot ? 0 : Infinity;
+  }
+
   if (RECT_KINDS.has(region.kind) && region.x2 !== undefined) {
     const left = Math.min(region.x, region.x2);
     const right = Math.max(region.x, region.x2);

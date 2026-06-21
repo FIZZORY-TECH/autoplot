@@ -12,13 +12,16 @@ import {
   renderResearchOverlays,
   seriesStartFor,
   reportIndexMismatch,
+  eventMarkId,
+  columnHalfWidths,
   _resetMismatchGuards,
+  _resetNotchTokens,
 } from './GenericResearchLayer';
 import { relativeLuminance, contrastRatio } from '../researchPalette';
 import type { ResearchOverlay } from '../../ai/schemas';
 import type { Bar } from '../../data/MarketDataProvider';
 import type { ChartLayout, RenderContext, ThemeTokens, ViewWindow } from '../types';
-import type { HitRegion } from '../hitRegions';
+import { hitTest, type HitRegion } from '../hitRegions';
 
 // ---------------------------------------------------------------------------
 // Stub canvas context (no pixels — call counting only).
@@ -238,6 +241,27 @@ describe('ts-anchored elements resolve ts→index per frame (prepend-immune)', (
   });
 });
 
+describe('columnHalfWidths — neighbour-aware column capping', () => {
+  it('isolated columns keep the full ±18 half-width', () => {
+    expect(columnHalfWidths([500])).toEqual([18]);
+    // Far apart (≥ 2·18 + 8 gap = 44px) → both stay full.
+    expect(columnHalfWidths([100, 200])).toEqual([18, 18]);
+  });
+  it('close neighbours shrink toward the midpoint, leaving a ≥8px gap', () => {
+    // Centers 20px apart: half = (20 - 8) / 2 = 6 on the shared edge.
+    expect(columnHalfWidths([100, 120])).toEqual([6, 6]);
+    // The shared dead-zone is exactly the gap: rightEdge0 + gap = leftEdge1.
+    const [h0, h1] = columnHalfWidths([100, 120]);
+    expect(120 - h1! - (100 + h0!)).toBe(8);
+  });
+  it('a middle column is capped by its NEARER neighbour', () => {
+    // 0..40 (far) and 40..50 (10px apart). Middle capped by the 10px side.
+    const hs = columnHalfWidths([0, 40, 50]);
+    expect(hs[2]).toBe((50 - 40 - 8) / 2); // 1
+    expect(hs[1]).toBe(1); // also capped by its nearer (right) neighbour
+  });
+});
+
 describe('contrast helpers', () => {
   it('white-on-black is the maximum 21:1 ratio', () => {
     const lWhite = relativeLuminance(255, 255, 255);
@@ -341,6 +365,83 @@ describe('renderResearchOverlays — all element types', () => {
     renderResearchOverlays(rc.ctx, rc, { b: bandOnly });
     // Two contiguous runs ([0,1] and [3,4]) → two fills.
     expect(ctx.fillCalls).toBe(2);
+  });
+
+  it('event_marks render as dispatch notches with a shared hit region per coincident cluster', () => {
+    _resetNotchTokens();
+    const hitRegions: HitRegion[] = [];
+    const { rc } = makeRc(hitRegions);
+    // Three event_marks: two share bar 3 (ts 180_000 → bar 3, since bars step
+    // 60_000ms), one at bar 5. The two coincident ones must collapse into ONE
+    // notch carrying BOTH eventIds; the third is its own notch.
+    const ov: ResearchOverlay = {
+      id: 'ev',
+      sym: 'BTC',
+      tf: '1h',
+      label: 'ev',
+      elements: [
+        { type: 'event_mark', kind: 'pin', ts: 180_000, label: 'a' }, // bar 3
+        { type: 'event_mark', kind: 'vline', ts: 180_000, label: 'b' }, // bar 3 (coincident)
+        { type: 'event_mark', kind: 'pin', ts: 300_000, label: 'c' }, // bar 5
+      ],
+    };
+    renderResearchOverlays(rc.ctx, rc, { ev: ov });
+
+    const research = hitRegions.filter((r) => r.kind === 'research');
+    // Two clusters → two hit regions (NOT three — the coincident pair merged).
+    expect(research.length).toBe(2);
+
+    type NotchPayload = { eventIds: string[]; paneIndex: number };
+    const cluster = research.find((r) => (r.payload as NotchPayload).eventIds.length === 2);
+    expect(cluster).toBeDefined();
+    const payload = cluster!.payload as NotchPayload;
+    // The merged cluster carries BOTH element ids, in element order.
+    expect(payload.eventIds).toEqual([eventMarkId('ev', 0), eventMarkId('ev', 1)]);
+    // paneIndex stamped (main pane = 0).
+    expect(payload.paneIndex).toBe(0);
+    // New target model: a full-pane-height COLUMN at the event x (not a radius).
+    expect(cluster!.shape).toBe('column');
+    // Column spans the FULL pane height (top to bottom of the event's pane).
+    expect(cluster!.y).toBe(layout.y);
+    expect(cluster!.y2).toBe(layout.y + layout.h);
+    // Width is positive but neighbour-capped here (the lone event at bar 5 is
+    // close), so the column shrinks toward the midpoint to keep an ≥8px dead-zone.
+    expect((cluster!.x2 ?? 0) - cluster!.x).toBeGreaterThan(0);
+
+    // The lone event is its own single-id cluster.
+    const lone = research.find((r) => (r.payload as NotchPayload).eventIds.length === 1);
+    expect((lone!.payload as NotchPayload).eventIds).toEqual([eventMarkId('ev', 2)]);
+  });
+
+  it('a click anywhere vertically in a column (top / middle / BOTTOM) resolves the hit', () => {
+    _resetNotchTokens();
+    const hitRegions: HitRegion[] = [];
+    const { rc } = makeRc(hitRegions);
+    const ov: ResearchOverlay = {
+      id: 'ev',
+      sym: 'BTC',
+      tf: '1h',
+      label: 'ev',
+      elements: [{ type: 'event_mark', kind: 'pin', ts: 180_000, label: 'a' }], // bar 3
+    };
+    renderResearchOverlays(rc.ctx, rc, { ev: ov });
+
+    const col = hitRegions.find((r) => r.shape === 'column');
+    expect(col).toBeDefined();
+    // Isolated event → full ±18 half-width = 36px wide (no neighbour to cap it).
+    expect((col!.x2 ?? 0) - col!.x).toBe(36);
+    const midX = (col!.x + (col!.x2 ?? col!.x)) / 2; // notch center x
+    // Top, middle, and bottom of the full-pane-height column all resolve the hit
+    // — no vertical travel / precision required (the whole point of the column).
+    for (const py of [layout.y + 1, layout.y + layout.h / 2, layout.y + layout.h - 1]) {
+      const res = hitTest(hitRegions, midX, py);
+      expect(res, `expected a hit at y=${py}`).not.toBeNull();
+      expect((res!.nearest.payload as { eventIds: string[] }).eventIds).toEqual([
+        eventMarkId('ev', 0),
+      ]);
+    }
+    // A click OUTSIDE the column's x band (well beyond the ±18 half-width) misses.
+    expect(hitTest(hitRegions, midX + 40, layout.y + layout.h / 2)).toBeNull();
   });
 
   it("align:'index' mismatch warns once without throwing", () => {

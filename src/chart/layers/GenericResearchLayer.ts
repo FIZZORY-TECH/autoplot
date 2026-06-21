@@ -49,13 +49,13 @@ import {
   drawValueChip,
   roundRect,
   GLYPH_LABEL_FONT,
-  type TimelineGlyphKind,
 } from '../glyphs';
 import { barIdxToPx, priceToPx, tsToBarIdx } from '../projection';
 import { validateResearchColor } from '../researchPalette';
 import { useToastStore } from '../../stores/useToastStore';
 import type { OverlayValueSource } from '../overlayExtremes';
 import type { ChartRenderer, ChartLayout, RenderContext, ViewWindow } from '../types';
+import { renderNotchPass, type NotchItem } from './notchShared';
 
 const MARKER_SIZE = 9;
 
@@ -207,6 +207,9 @@ export function reportIndexMismatch(overlayId: string, valuesLen: number, barCou
     }
   }
 }
+
+// Re-export shared helpers so existing test imports from this module still work.
+export { _resetNotchTokens, columnHalfWidths } from './notchShared';
 
 // ---------------------------------------------------------------------------
 // Element renderers
@@ -488,13 +491,45 @@ function renderMarkers(
   ctx.restore();
 }
 
-function renderEventMark(
+/**
+ * A single `event_mark` collected for the clustered dispatch-notch pass.
+ * `eventId` is the stable identifier S6 uses to resolve the full event back from
+ * the store (see `eventMarkId`).
+ */
+interface CollectedEvent extends NotchItem {
+  overlayId: string;
+  /** Element index within `overlay.elements` (the id's discriminator). */
+  elementIndex: number;
+  el: EventMarkElement;
+}
+
+/**
+ * Stable id for an `event_mark` element. S6 resolves it back to the full event
+ * data via `useChartMutationStore.researchOverlays[overlayId].elements[index]`
+ * (filtering to `type === 'event_mark'` is unnecessary — the index is absolute
+ * within the overlay's element list).
+ *
+ *   format: `research:<overlayId>:<elementIndex>`
+ */
+export function eventMarkId(overlayId: string, elementIndex: number): string {
+  return `research:${overlayId}:${elementIndex}`;
+}
+
+/**
+ * Collect a single `event_mark` element into the deferred notch pass, drawing
+ * any `range`-span band immediately (the clickable HOTSPOT is the notch at `ts`,
+ * but a range still shades its span underneath). Pushes nothing to hitRegions —
+ * the clustered notch pass owns the hit region so coincident events share one.
+ */
+function collectEventMark(
   ctx: CanvasRenderingContext2D,
   rc: RenderContext,
   h: Helpers,
   el: EventMarkElement,
   overlay: ResearchOverlay,
   colorIdx: number,
+  elementIndex: number,
+  out: CollectedEvent[],
 ): void {
   const { bars, layout } = rc;
   if (!bars.length) return;
@@ -504,28 +539,57 @@ function renderEventMark(
   if (cx < layout.x - 20 || cx > layout.x + layout.w + 20) return;
 
   const color = validateResearchColor(el.color ?? overlay.color, colorIdx);
-  const kind = el.kind as TimelineGlyphKind;
 
-  // Range uses ts_end to resolve the right edge; fall back to a 4-bar band.
-  let cx2: number | undefined;
-  if (kind === 'range') {
+  // range: keep the shaded span (anchored at ts → ts_end / 4-bar fallback). The
+  // notch hotspot is still anchored at `ts` and added by the clustered pass.
+  if (el.kind === 'range') {
     const endIdx =
       el.ts_end !== undefined
         ? nearestBarIndex(bars, el.ts_end)
         : Math.min(barIdx + 4, bars.length - 1);
-    cx2 = h.xToPx(endIdx + 0.5);
+    const cx2 = h.xToPx(endIdx + 0.5);
+    ctx.save();
+    ctx.font = GLYPH_LABEL_FONT;
+    // 'range' draws ONLY the span band + left rule (no pin/notch double-up).
+    drawTimelineGlyph(ctx, 'range', { cx, cx2, layout }, color, el.label);
+    ctx.restore();
   }
 
-  ctx.save();
-  ctx.font = GLYPH_LABEL_FONT;
-  const anchor = drawTimelineGlyph(ctx, kind, { cx, cx2, layout }, color, el.label);
-  ctx.restore();
+  out.push({
+    eventId: eventMarkId(overlay.id, elementIndex),
+    overlayId: overlay.id,
+    elementIndex,
+    barIdx,
+    cx,
+    color,
+    el,
+  });
+}
 
-  rc.hitRegions?.push({
-    ...anchor,
-    r: kind === 'pin' ? DOT_RADIUS_PX : anchor.r,
-    kind: 'research',
-    payload: { overlayId: overlay.id, label: el.label, ts: el.ts },
+/**
+ * Clustered dispatch-notch pass — thin shim over the shared `renderNotchPass`.
+ * Provides the research-layer-specific HitRegion kind ('research') and the
+ * back-compat payload shape for OverlayInfoPanel.researchPanel.
+ */
+function renderEventNotches(
+  ctx: CanvasRenderingContext2D,
+  rc: RenderContext,
+  events: CollectedEvent[],
+  paneIndex: number,
+): void {
+  renderNotchPass(ctx, rc, events, paneIndex, {
+    hitKind: 'research',
+    buildPayload(group, cxCenter, pIdx) {
+      const first = group[0]!;
+      return {
+        eventIds: group.map((g) => g.eventId),
+        paneIndex: pIdx,
+        cxCenter,
+        overlayId: first.overlayId,
+        label: first.el.label,
+        ts: first.el.ts,
+      };
+    },
   });
 }
 
@@ -626,10 +690,16 @@ export function renderResearchOverlays(
 
   // Per-overlay color index (stable order via Object.values insertion order),
   // used by validateResearchColor → colorForIndex for rejected/missing colors.
+  //
+  // `event_mark` elements are NOT drawn inline — they are COLLECTED here and
+  // rendered as clustered dispatch-notches in a single post-pass (so coincident
+  // events at the same bar collapse into one notch + one hit region). Every
+  // other element type still draws inline.
+  const collectedEvents: CollectedEvent[] = [];
   let overlayIdx = 0;
   for (const overlay of overlayList) {
     const colorIdx = overlayIdx++;
-    for (const el of overlay.elements) {
+    overlay.elements.forEach((el, elementIndex) => {
       switch (el.type) {
         case 'line':
           renderLine(ctx, rc, h, el, overlay, colorIdx);
@@ -644,7 +714,7 @@ export function renderResearchOverlays(
           renderMarkers(ctx, rc, h, el, overlay, colorIdx);
           break;
         case 'event_mark':
-          renderEventMark(ctx, rc, h, el, overlay, colorIdx);
+          collectEventMark(ctx, rc, h, el, overlay, colorIdx, elementIndex, collectedEvents);
           break;
         case 'text':
           renderText(ctx, rc, h, el, overlay, colorIdx);
@@ -653,8 +723,14 @@ export function renderResearchOverlays(
           renderHotspot(rc, h, el, overlay);
           break;
       }
-    }
+    });
   }
+
+  // S4 seam: this layer is currently invoked once with the main pane's rect, so
+  // all notches render on pane 0's spine. When ChartCanvas's S4 coordinator
+  // begins invoking layers per-pane, the collected set should be filtered to the
+  // active pane's events and `paneIndex` stamped from the render context.
+  renderEventNotches(ctx, rc, collectedEvents, 0);
 }
 
 // ---------------------------------------------------------------------------
