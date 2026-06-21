@@ -10,7 +10,7 @@
  *   - Smooth chart-type morph via alpha cross-fade over --t-med (320ms), cubic-out.
  *
  * P1.4 added:
- *   - Mouse + touch interaction wiring via `createChartInteraction()`.
+ *   - Unified Pointer Events interaction wiring via `createChartInteraction()`.
  *   - Crosshair overlay (DOM, glass readout) lifted into ChartCanvas state.
  *   - Range-select event surface (P2.6 will render the band).
  *
@@ -950,11 +950,11 @@ export function ChartCanvas({
       // layout shift that happened while the pointer was outside is picked up.
       boundingRectRef.current = el.getBoundingClientRect();
     };
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
       // Refresh rect on pointerdown as well — covers the case where the user
-      // clicks without first triggering mouseenter (e.g. keyboard-focus flows).
+      // clicks without first triggering pointerenter (e.g. keyboard-focus flows).
       boundingRectRef.current = el.getBoundingClientRect();
-      interaction.onMouseDown(e);
+      interaction.onPointerDown(e);
       // Track for click detection (left button only, no shift/range drag).
       if (e.button === 0 && !e.shiftKey) {
         const rect = getRect();
@@ -967,8 +967,8 @@ export function ChartCanvas({
         clickStartRef.current = null;
       }
     };
-    const onMove = (e: MouseEvent) => {
-      interaction.onMouseMove(e);
+    const onMove = (e: PointerEvent) => {
+      interaction.onPointerMove(e);
       setIsPanningCursor(interaction.isPanning());
 
       // Step 5 — overlay hotspot query against the last completed draw.
@@ -995,8 +995,8 @@ export function ChartCanvas({
         }
       }
     };
-    const onUp = (e: MouseEvent) => {
-      interaction.onMouseUp(e);
+    const onUp = (e: PointerEvent) => {
+      interaction.onPointerUp(e);
       setIsPanningCursor(false);
       // Click-detection: fire only if movement stayed below threshold.
       const start = clickStartRef.current;
@@ -1048,42 +1048,46 @@ export function ChartCanvas({
         }
       }
     };
-    const onLeave = (e: MouseEvent) => {
-      interaction.onMouseLeave(e);
+    const onLeave = (_e: PointerEvent) => {
+      // CRITICAL GUARD: while a pointer is captured (mid-drag), the browser may
+      // still deliver pointerleave even though move/up keep coming to the
+      // captured target. We must NOT clear the crosshair / hotspot mid-drag, so
+      // only run the clear when no pointer is currently active. Hover-leave
+      // (no active pointer) clears as before.
+      if (interaction.hasActivePointer()) return;
       setIsOverEventColumn(false);
+      // Mirror the old onMouseLeave: hide the crosshair on hover-out.
+      interaction.clearCrosshair();
       // Step 5 — clear any active overlay hotspot when the pointer leaves.
       if (lastHotspotKeyRef.current !== '') {
         lastHotspotKeyRef.current = '';
         onHotspotChangeRef.current?.(null);
       }
     };
+    const onCancel = (e: PointerEvent) => {
+      interaction.onPointerCancel(e);
+      setIsPanningCursor(false);
+    };
     const onWheel = (e: WheelEvent) => interaction.onWheel(e);
-    const onTStart = (e: TouchEvent) => interaction.onTouchStart(e);
-    const onTMove = (e: TouchEvent) => interaction.onTouchMove(e);
-    const onTEnd = (e: TouchEvent) => interaction.onTouchEnd(e);
 
     el.addEventListener('mouseenter', onEnter);
-    el.addEventListener('mousedown', onDown);
-    el.addEventListener('mousemove', onMove);
-    // Listen for mouseup on window so dragging off the canvas still ends cleanly.
-    window.addEventListener('mouseup', onUp);
-    el.addEventListener('mouseleave', onLeave);
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    // With pointer capture, pointerup is delivered on the captured target even
+    // when released off-canvas — so binding on the element (not window) ends a
+    // drag cleanly. This retires the old window-level mouseup workaround.
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onCancel);
+    el.addEventListener('pointerleave', onLeave);
     el.addEventListener('wheel', onWheel, { passive: false });
-    el.addEventListener('touchstart', onTStart, { passive: false });
-    el.addEventListener('touchmove', onTMove, { passive: false });
-    el.addEventListener('touchend', onTEnd);
-    el.addEventListener('touchcancel', onTEnd);
     return () => {
       el.removeEventListener('mouseenter', onEnter);
-      el.removeEventListener('mousedown', onDown);
-      el.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      el.removeEventListener('mouseleave', onLeave);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onCancel);
+      el.removeEventListener('pointerleave', onLeave);
       el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('touchstart', onTStart);
-      el.removeEventListener('touchmove', onTMove);
-      el.removeEventListener('touchend', onTEnd);
-      el.removeEventListener('touchcancel', onTEnd);
       interaction.reset();
     };
   }, [interaction]);

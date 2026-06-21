@@ -356,7 +356,7 @@ export function EventListPopover({
   // Dismiss on outside click (mirror OverlayInfoPanel's click-elsewhere unpin).
   useEffect(() => {
     if (!request) return;
-    const onDown = (e: MouseEvent): void => {
+    const onDown = (e: PointerEvent): void => {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
         close();
       }
@@ -364,11 +364,11 @@ export function EventListPopover({
     // Defer binding to the next tick so the opening click doesn't immediately
     // close the popover.
     const t = window.setTimeout(() => {
-      window.addEventListener('mousedown', onDown);
+      window.addEventListener('pointerdown', onDown);
     }, 0);
     return () => {
       window.clearTimeout(t);
-      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('pointerdown', onDown);
     };
   }, [request, close]);
 
