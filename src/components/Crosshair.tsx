@@ -19,6 +19,7 @@ import type { Bar } from '../data/MarketDataProvider';
 import { fmtPrice } from '../engine/indicators';
 import type { CrosshairState } from '../chart/interaction';
 import { fmtVol } from '../lib/format';
+import { usePrimaryReadout } from '../stores/useOverlayHitStore';
 
 interface CrosshairProps {
   state: CrosshairState | null;
@@ -44,6 +45,12 @@ function usePrefersReducedMotion(): boolean {
 
 export function Crosshair({ state, bars, layout }: CrosshairProps): JSX.Element | null {
   const reducedMotion = usePrefersReducedMotion();
+  // Precedence ladder (see useOverlayHitStore): when an event hotspot is hovered
+  // ('event') or its popover is open ('popover'), the EVENT owns the readout —
+  // the crosshair PRICE value chip must NOT compete. We keep faint hairlines for
+  // spatial context but suppress the OHLCV chip in those two rungs.
+  const primary = usePrimaryReadout();
+  const showPriceChip = primary !== 'event' && primary !== 'popover';
 
   if (!state) return null;
   const bar = bars[state.barIdx];
@@ -104,10 +111,12 @@ export function Crosshair({ state, bars, layout }: CrosshairProps): JSX.Element 
         }}
       />
 
-      {/* Floating glass readout */}
-      {bar && (
+      {/* Floating glass readout — suppressed while an event is the primary
+          readout so the price chip never competes with the event affordance. */}
+      {bar && showPriceChip && (
         <div
           className="glass"
+          data-testid="crosshair-readout"
           style={{
             position: 'absolute',
             left: readoutLeft,

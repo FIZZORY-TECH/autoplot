@@ -36,6 +36,7 @@ import type { HitRegion, HitResult } from './hitRegions';
 import type { Trade } from '../engine/backtest';
 import type { Mark, TrendRow } from '../lib/db';
 import type { TimelineEvent } from '../stores/useChartMutationStore';
+import { fmtTs } from './chartTimeFormat';
 
 // ---------------------------------------------------------------------------
 // Public imperative handle — lets the parent read the currently-pinned mark.
@@ -81,18 +82,6 @@ const PANEL_W = 200;
 /** Clamp the panel left so it stays inside the chart-wrap (mirrors ChartCanvas). */
 function clampPanelX(left: number, wrapW: number): number {
   return Math.max(8, Math.min(wrapW - PANEL_W - 8, left));
-}
-
-/** Compact local timestamp (date + HH:MM) for overlay metadata. */
-function fmtTs(ts: number): string {
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 /** ▲ for up / ▼ for down / · for flat — color is paired, never sole signal. */
@@ -311,6 +300,11 @@ export function OverlayInfoPanel({
   const hover = useOverlayHitStore((s) => s.hit);
   const clickTick = useOverlayHitStore((s) => s.clickTick);
   const setPinnedMarkInStore = useOverlayHitStore((s) => s.setPinnedMark);
+  // Precedence ladder (see useOverlayHitStore.derivePrimaryReadout): when an
+  // event-list popover is open it OWNS the screen — this hover/pinned readout
+  // must not compete (and we never enter the pinned+popover double-interactive
+  // state the investigation flagged).
+  const popoverOpen = useOverlayHitStore((s) => s.eventPopover !== null);
 
   // Pinned hit + the coincident index being viewed. null pin = hover mode.
   const [pinned, setPinned] = useState<HitResult | null>(null);
@@ -328,6 +322,12 @@ export function OverlayInfoPanel({
       setPinned(null);
     }
   }, [clickTick, hover]);
+
+  // Popover precedence: when an event-list popover opens it is primary, so drop
+  // any pin and let this panel yield (the render below early-returns too).
+  useEffect(() => {
+    if (popoverOpen) setPinned(null);
+  }, [popoverOpen]);
 
   // Escape unpins.
   useEffect(() => {
@@ -361,7 +361,28 @@ export function OverlayInfoPanel({
   // region is derived from pinned+coincidentIdx — including pinned + coincidentIdx is sufficient.
   }, [pinned, coincidentIdx, region, setPinnedMarkInStore]);
 
+  // Popover is primary (ladder rung 1) — yield entirely.
+  if (popoverOpen) return null;
   if (!active || !region) return null;
+
+  // Event-hotspot HOVER (ladder rung 2, not yet clicked): progressive
+  // disclosure — show a CONCISE hint ("click to see N events" + title), NOT the
+  // full event panel. Full detail arrives on click via EventListPopover. When
+  // the region is PINNED we fall through to the full per-kind panel (pinning a
+  // non-event mark, or the rare case a pin survives without a popover).
+  const isEventHover =
+    !pinned && (region.kind === 'research' || region.kind === 'timelinePin');
+  if (isEventHover) {
+    return (
+      <EventHoverHint
+        region={region}
+        anchorX={active.clientX}
+        anchorY={active.clientY}
+        layout={layout}
+        wrapW={wrapW}
+      />
+    );
+  }
 
   const spec = regionToPanel(region, bars);
   const showCycler = !!pinned && coincident.length > 1;
@@ -484,6 +505,85 @@ export function OverlayInfoPanel({
       {spec.footer && (
         <div style={{ marginTop: 'var(--sp-4, 4px)', color: 'var(--ink-3)' }}>{spec.footer}</div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Event-hover hint (ladder rung 2) — a single concise line that surfaces the
+// event title (if any) and the click affordance, WITHOUT a heavy multi-row
+// panel and WITHOUT a competing price chip (the crosshair suppresses its chip
+// for the 'event' rung). pointer-events:none so it never blocks the click that
+// opens the full popover.
+// ---------------------------------------------------------------------------
+
+/** Best-effort short label from a research / timelinePin hover payload. */
+function eventHintLabel(region: HitRegion): string {
+  const p = (region.payload ?? {}) as Record<string, unknown>;
+  if (typeof p['label'] === 'string' && p['label']) return p['label'];
+  if (
+    p['panel'] &&
+    typeof p['panel'] === 'object' &&
+    typeof (p['panel'] as Record<string, unknown>)['title'] === 'string'
+  ) {
+    return (p['panel'] as Record<string, string>)['title']!;
+  }
+  return 'Event';
+}
+
+function EventHoverHint({
+  region,
+  anchorX,
+  anchorY,
+  layout,
+  wrapW,
+}: {
+  region: HitRegion;
+  anchorX: number;
+  anchorY: number;
+  layout: { x: number; y: number; w: number; h: number };
+  wrapW: number;
+}): JSX.Element {
+  const label = eventHintLabel(region);
+  const left = clampPanelX(anchorX + 14, wrapW);
+  const ESTIMATED_H = 40;
+  const flipUp = anchorY + ESTIMATED_H + 16 > layout.y + layout.h;
+  const top = flipUp
+    ? Math.max(layout.y + 4, anchorY - ESTIMATED_H - 14)
+    : Math.min(layout.y + layout.h - ESTIMATED_H - 4, anchorY + 14);
+  return (
+    <div
+      role="status"
+      aria-label={`Event: ${label}. Click to see details.`}
+      data-testid="event-hover-hint"
+      className="glass-card overlay-enter"
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        maxWidth: PANEL_W,
+        padding: 'var(--sp-6) var(--sp-8)',
+        zIndex: 'var(--z-chart-panel)',
+        background: 'var(--surface-overlay-strong)',
+        pointerEvents: 'none',
+        color: 'var(--ink-1)',
+        fontSize: 'var(--fs-meta, 11px)',
+        fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
+      }}
+    >
+      <div
+        style={{
+          color: 'var(--ink-1)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ color: 'var(--ink-3)', marginTop: 'var(--sp-4, 4px)' }}>
+        Click to see details
+      </div>
     </div>
   );
 }

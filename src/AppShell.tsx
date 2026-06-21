@@ -20,8 +20,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hydrateAppState, mountAppStateSync, mountSettingsSync } from './lib/hydrate';
 import ChartCanvas from './chart/ChartCanvas';
-import type { ChartType } from './chart/ChartCanvas';
+import type { ChartType, SeriesPaneInput } from './chart/ChartCanvas';
 import OverlayInfoPanel from './chart/OverlayInfoPanel';
+import EventListPopover from './chart/EventListPopover';
+import type { ExpandableEvent } from './chart/EventListPopover';
+import ChartHotspotFocusOverlay from './chart/ChartHotspotFocusOverlay';
+import type { ChartHotspotFocusOverlayHandle } from './chart/ChartHotspotFocusOverlay';
+import type { NotchCluster } from './chart/ChartCanvas';
+import EventReaderModal from './chart/EventReaderModal';
 import { candlesRenderer } from './chart/renderers/candles';
 import { heikinRenderer } from './chart/renderers/heikin';
 import { barsRenderer } from './chart/renderers/bars';
@@ -72,6 +78,7 @@ import { SettingsPanel } from './panels/SettingsPanel';
 import { FirstRun } from './panels/FirstRun';
 import { useSettingsUiStore } from './stores/useSettingsUiStore';
 import { MockBadge } from './components/MockBadge';
+import { DevReseedButton } from './components/DevReseedButton';
 import { ToastHost } from './components/ToastHost';
 import { EquityCredsBanner, EquityChartEmpty } from './components/EquityCredsBanner';
 import { subscribeEquityCredStatus, getEquityCredStatus } from './data/equityCredStatus';
@@ -374,6 +381,25 @@ export default function AppShell() {
   // P2.6 — track chart container size so RangeStats can be positioned correctly.
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
   const [chartSize, setChartSize] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
+  // S8 — fullscreen event reader. `readerEvent` drives the conditional mount
+  // (null = closed). On open we capture the trigger's screen rect (for the
+  // scale-from-row animation) and the trigger element (for focus-return on
+  // close). The popover stays mounted behind the scrim so focus can return to
+  // its row; if the row has unmounted, fall back to the chart canvas.
+  const [readerEvent, setReaderEvent] = useState<ExpandableEvent | null>(null);
+  const [readerOriginRect, setReaderOriginRect] = useState<
+    { x: number; y: number; w: number; h: number } | null
+  >(null);
+  const readerTriggerRef = useRef<HTMLElement | null>(null);
+
+  // S9 — keyboard-reachable notch hotspots. ChartCanvas emits the ordered list
+  // of visible event-notch clusters after each draw; we render sr-only buttons
+  // over them via ChartHotspotFocusOverlay.
+  const [notchClusters, setNotchClusters] = useState<NotchCluster[]>([]);
+  const hotspotOverlayRef = useRef<ChartHotspotFocusOverlayHandle | null>(null);
+  // Key of the cluster that most recently opened the popover — used to return
+  // focus to that button when the popover closes with Esc.
+  const openPopoverClusterKeyRef = useRef<string | null>(null);
   // Step 6 — overlay info panel hover/pin signal now lives in useOverlayHitStore
   // (NOT React state), so hotspot enter/leave + chart click no longer re-render
   // the whole shell. OverlayInfoPanel is the sole subscriber.
@@ -658,6 +684,68 @@ export default function AppShell() {
     (window as unknown as Record<string, unknown>).__researchOverlayTest = hook;
   }, []);
 
+  // S10 — DEV-only Playwright test hooks for event-hotspot e2e guards.
+  // Three capabilities exposed on window.__eventHotspotTest (guarded on DEV):
+  //   openEventPopover(req) — directly opens the event-list popover (bypasses
+  //     canvas click; lets spec verify rail non-interference without simulating
+  //     canvas gestures which are unreliable in headless mode).
+  //   openReader(event)    — directly mounts EventReaderModal (lets spec verify
+  //     focus-trap + restore without needing a fully-rendered popover row).
+  //   injectSeriesDataset(ds) — adds a `kind:'series'` PersistedDataset to the
+  //     store + selects it as the active AI overlay, triggering the sub-pane.
+  // All mutations are in-memory only (no Tauri / SQLite calls). Stripped in prod.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const hook = {
+      openEventPopover: (req: {
+        kind: 'research' | 'timelinePin';
+        eventIds: string[];
+        paneIndex: number;
+        anchorX: number;
+        anchorY: number;
+      }) => useOverlayHitStore.getState().openEventPopover(req),
+      closeEventPopover: () => useOverlayHitStore.getState().closeEventPopover(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      openReader: (event: any) => setReaderEvent(event),
+      closeReader: () => setReaderEvent(null),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      injectSeriesDataset: (ds: any) => {
+        // Add to the in-memory store (no DB write) and select it as the active overlay.
+        useDatasetStore.setState((s) => ({
+          datasets: [
+            ...s.datasets.filter((d) => d.id !== ds.id),
+            ds,
+          ],
+        }));
+        useAppStore.getState().setAiOverlayDataset(ds.id);
+      },
+      clearSeriesDataset: () => {
+        useAppStore.getState().setAiOverlayDataset(null);
+      },
+    };
+    (window as unknown as Record<string, unknown>).__eventHotspotTest = hook;
+  }, [setReaderEvent]);
+
+  // DEV-only — auto-seed the event/series mock fixture once bars are loaded for
+  // the current (sym, tf). Anchors event timestamps to the VISIBLE bars. The
+  // ref guard makes this seed ONCE per symbol/timeframe load (not on every bar
+  // tick). Manual reseed is wired to the DevReseedButton below.
+  // Stripped from production: the whole effect body is behind import.meta.env.DEV.
+  const devSeededKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (bars.length < 16) return;
+    const key = `${activeSym}:${tf}`;
+    if (devSeededKeyRef.current === key) return;
+    devSeededKeyRef.current = key;
+    void import('./ai/devEventFixtures').then(({ seedDevEventFixtures }) => {
+      seedDevEventFixtures(bars, activeSym, tf);
+      // Also expose a console-driven reseed helper (DEV only).
+      (window as unknown as Record<string, unknown>).__seedDevEventFixtures = () =>
+        seedDevEventFixtures(bars, activeSym, tf, { bumpNonce: true });
+    });
+  }, [bars, activeSym, tf]);
+
   // P2.6: forward range-select events into the Zustand store.
   const handleRangeSelect = useCallback((r: RangeSelectEvent | null) => {
     setRangeScope(r);
@@ -675,7 +763,40 @@ export default function AppShell() {
     // pin signal so OverlayInfoPanel pins the hovered hit (or unpins if none is
     // hovered). Goes through the store (not React state) so the shell does not
     // re-render on click.
-    useOverlayHitStore.getState().pin();
+    const hitStore = useOverlayHitStore.getState();
+    hitStore.pin();
+    // S6 — a click on an event-hotspot notch opens the event-list popover. The
+    // hover hit is already published to the store; if its nearest region is an
+    // event cluster (kind research/timelinePin carrying `eventIds`), open the
+    // list anchored at the notch's clamped chart coords. (Hover still shows the
+    // single-row OverlayInfoPanel readout; the LIST is the click interaction.)
+    const nearest = hitStore.hit?.nearest;
+    if (nearest && (nearest.kind === 'research' || nearest.kind === 'timelinePin')) {
+      const payload = nearest.payload as
+        | { eventIds?: string[]; paneIndex?: number; cxCenter?: number }
+        | undefined;
+      if (payload?.eventIds && payload.eventIds.length > 0) {
+        // The hit region is a full-pane COLUMN: `nearest.x` is its LEFT edge and
+        // `nearest.y` the pane TOP. Anchor the popover at the notch CENTER x
+        // (carried on the payload as `cxCenter`) and the column BOTTOM y
+        // (`nearest.y2`, where the notch actually rides the spine) so it opens
+        // beside the notch — mirroring the focus-overlay click path. The
+        // popover's flip-up clamp then places it above this bottom anchor,
+        // fully on-canvas. Falls back to x/y if a region lacks the new fields.
+        const anchorX =
+          typeof payload.cxCenter === 'number' ? payload.cxCenter : nearest.x;
+        const anchorY =
+          typeof nearest.y2 === 'number' ? nearest.y2 : nearest.y;
+        hitStore.openEventPopover({
+          kind: nearest.kind,
+          eventIds: payload.eventIds,
+          paneIndex: payload.paneIndex ?? 0,
+          anchorX,
+          anchorY,
+        });
+        return;
+      }
+    }
     if (activeTool !== 'mark' && activeTool !== 'comment') return;
     setComposer({
       mode: activeTool,
@@ -810,6 +931,10 @@ export default function AppShell() {
     const idx = datasets.findIndex((d) => d.id === aiOverlayDatasetId);
     if (idx < 0) return undefined;
     const ds = datasets[idx];
+    // S4 — kind-driven routing: a `series`-scaled dataset (RSI 0-100 etc.)
+    // renders in its own sub-pane (see `seriesPane` below), NOT on the price
+    // axis. Only `overlay`-kind datasets become a price-axis overlay here.
+    if (ds.kind === 'series') return undefined;
     // Inline palette ref (also exported from useDatasetStore.colorForIndex).
     const palette = [
       'oklch(0.82 0.14 215)',
@@ -822,6 +947,33 @@ export default function AppShell() {
     const values = ds.values.filter((v): v is number => v !== null);
     return {
       values,
+      color: palette[((idx % palette.length) + palette.length) % palette.length],
+    };
+  }, [aiOverlayDatasetId, datasets, hiddenOverlayIds]);
+
+  // S4 — the active dataset routed to a stacked SUB-PANE when its explicit
+  // `kind === 'series'` (a non-price scale, e.g. RSI 0-100). Deterministic,
+  // kind-driven — NO value-range heuristic. ChartCanvas computes the sub-pane's
+  // y-range from the visible slice every frame, so it pans/zooms in lockstep
+  // with the shared time axis. `undefined` → single price pane (no regression).
+  const seriesPane = useMemo<SeriesPaneInput | undefined>(() => {
+    if (aiOverlayDatasetId === null) return undefined;
+    if (hiddenOverlayIds.has(overlayKey('dataset', aiOverlayDatasetId))) return undefined;
+    const idx = datasets.findIndex((d) => d.id === aiOverlayDatasetId);
+    if (idx < 0) return undefined;
+    const ds = datasets[idx];
+    if (ds.kind !== 'series') return undefined;
+    const palette = [
+      'oklch(0.82 0.14 215)',
+      'oklch(0.78 0.18 320)',
+      'oklch(0.85 0.16 80)',
+      'oklch(0.78 0.16 150)',
+      'oklch(0.78 0.20 25)',
+    ];
+    return {
+      label: ds.label,
+      values: ds.values,
+      align: ds.align,
       color: palette[((idx % palette.length) + palette.length) % palette.length],
     };
   }, [aiOverlayDatasetId, datasets, hiddenOverlayIds]);
@@ -1198,6 +1350,7 @@ export default function AppShell() {
       }}
     >
       <MockBadge />
+      {import.meta.env.DEV && <DevReseedButton bars={bars} sym={activeSym} tf={tf} />}
       <EquityCredsBanner />
       <ToastHost />
 
@@ -1265,6 +1418,9 @@ export default function AppShell() {
       {/* Chart canvas */}
       <div
         ref={chartWrapRef}
+        /* tabIndex=-1 so EventListPopover can programmatically return focus here
+           on Esc / removed-while-open (S6) without making it tab-reachable. */
+        tabIndex={-1}
         style={{
           position: 'absolute',
           top: CHART_RESERVE_TOP,
@@ -1296,7 +1452,9 @@ export default function AppShell() {
           onChartClick={handleChartClick}
           onHoverBar={setHoveredBarIdx}
           onHotspotChange={(hit) => useOverlayHitStore.getState().setHit(hit)}
+          onNotchClustersChange={setNotchClusters}
           activeTool={activeTool}
+          seriesPane={seriesPane}
         />
         {/* Step 6 — shared overlay info card. Subscribes to useOverlayHitStore
             for the hover hit + click signal (so the shell never re-renders on
@@ -1308,6 +1466,60 @@ export default function AppShell() {
           wrapW={chartSize.w}
           onDeleteMark={handleDeleteMark}
           onEditMark={handleEditMark}
+        />
+        {/* S9 — transparent DOM focus overlay. Renders one sr-only button per
+            visible event-notch cluster so they are Tab-reachable + announced
+            by screen readers. Lives inside the chart-wrap so coordinates are
+            already canvas-wrap-relative. Buttons must not overlap the 48px
+            right rail (rightBoundary = chartSize.w − 48). */}
+        <ChartHotspotFocusOverlay
+          ref={hotspotOverlayRef}
+          clusters={notchClusters}
+          rightBoundary={Math.max(0, chartSize.w - 48)}
+          onOpenPopover={(req) => {
+            // Track which cluster key opened the popover for focus-return on Esc.
+            const matchingCluster = notchClusters.find(
+              (c) =>
+                c.kind === req.kind &&
+                c.eventIds.length === req.eventIds.length &&
+                c.eventIds[0] === req.eventIds[0],
+            );
+            openPopoverClusterKeyRef.current = matchingCluster?.key ?? null;
+            useOverlayHitStore.getState().openEventPopover(req);
+          }}
+        />
+
+        {/* S6 — event-list popover. Opened (via useOverlayHitStore) by a CLICK
+            on an event-hotspot notch; resolves the cluster's eventIds → full
+            event rows. onExpand is the S8 seam (mounts EventReaderModal). */}
+        <EventListPopover
+          layout={chartLayout}
+          wrapW={chartSize.w}
+          canvasFocusEl={chartWrapRef.current}
+          onReturnFocus={() => {
+            // S9: try to return focus to the originating notch button; fall
+            // back to the chart canvas element if the key is gone.
+            const key = openPopoverClusterKeyRef.current;
+            openPopoverClusterKeyRef.current = null;
+            if (key && hotspotOverlayRef.current) {
+              hotspotOverlayRef.current.focusByKey(key);
+            } else {
+              chartWrapRef.current?.focus();
+            }
+          }}
+          onExpand={(ev) => {
+            // Capture the originating element (the expand control / popover row,
+            // whichever has focus at click/Enter time) for the scale-from-row
+            // animation + focus-return. The popover stays mounted behind the
+            // scrim so this element is still in the DOM when we close.
+            const trigger = document.activeElement as HTMLElement | null;
+            readerTriggerRef.current = trigger;
+            const r = trigger?.getBoundingClientRect();
+            setReaderOriginRect(
+              r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null,
+            );
+            setReaderEvent(ev);
+          }}
         />
         {/* P2.6 — Range stats card, floats above the selection band. */}
         {rangeScope !== null && bars.length > 0 && (
@@ -1344,6 +1556,22 @@ export default function AppShell() {
         {/* P2.1 — Actions: top-right glass button cluster, chart-scoped. */}
         <Actions onResetView={resetView} />
       </div>
+
+      {/* S8 — fullscreen event reader. Mounted at the SHELL level (outside the
+          chart-wrap's isolated stacking context) so its position:fixed scrim at
+          --z-modal-scrim (700) correctly covers the terminal drawer (z-drawer 300),
+          rail (z-rail 400), and all other chrome. Mounting inside the chart-wrap
+          (isolation:isolate, no z-index) would confine the scrim to the chart-wrap's
+          local stacking context, leaving the terminal drawer visually and
+          pointer-event-wise above the scrim — the "MockBadge" pattern applied to
+          modals (S10 stacking verification). Focus returns to the popover trigger or
+          chart canvas via restoreFocusEl. */}
+      <EventReaderModal
+        event={readerEvent}
+        originRect={readerOriginRect}
+        restoreFocusEl={readerTriggerRef.current ?? chartWrapRef.current}
+        onClose={() => setReaderEvent(null)}
+      />
 
       {/* P2.2 — Dock: bottom-center glass capsule with chart-type toggle,
            4-tier tf scrubber (1h/4h/1d/1w), and tools cluster.

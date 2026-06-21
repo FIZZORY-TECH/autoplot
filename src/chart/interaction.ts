@@ -327,8 +327,20 @@ export function createChartInteraction(
     const d = drag;
     drag = null;
     if (!d) return;
-    const target = e.currentTarget as Element | null;
-    if (!target) return;
+    // The mouseup listener is bound on `window` (so a drag that ends off the
+    // canvas still cleans up), which means `e.currentTarget` is the Window —
+    // it has no getBoundingClientRect. Prefer currentTarget only when it is a
+    // real rect-providing Element; otherwise fall back to `e.target` (the
+    // canvas under the pointer). Without this, relativeXY throws a TypeError
+    // here and aborts the whole mouseup handler — silently killing the
+    // click→onChartClick path (event-hotspot popover, mark composer, trend
+    // deselect). See hitRegions/event-hotspot real-click regression test.
+    const ct = e.currentTarget as unknown;
+    const target: Element | null =
+      ct && typeof (ct as Element).getBoundingClientRect === 'function'
+        ? (ct as Element)
+        : (e.target as Element | null);
+    if (!target || typeof target.getBoundingClientRect !== 'function') return;
     const { x, y } = relativeXY(e, target);
     const moved = Math.abs(x - d.startX) > TAP_PX;
 

@@ -29,13 +29,16 @@
  */
 
 import type { Bar } from '../../data/MarketDataProvider';
-import type { TimelineLayer } from '../../stores/useChartMutationStore';
-import { DOT_RADIUS_PX } from '../hitRegions';
+import type { TimelineEvent, TimelineLayer } from '../../stores/useChartMutationStore';
 import { drawTimelineGlyph, GLYPH_LABEL_FONT } from '../glyphs';
+import { renderNotchPass, type NotchItem } from './notchShared';
 import type { ChartRenderer, ChartLayout, RenderContext, ViewWindow } from '../types';
 
 const DEFAULT_EVENT_COLOR = 'oklch(0.82 0.14 215)'; // cyan-ish, matches customSeriesOverlay
 const LABEL_FONT = GLYPH_LABEL_FONT;
+
+// Re-export shared _resetNotchTokens so test imports from this module still work.
+export { _resetNotchTokens } from './notchShared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -75,6 +78,21 @@ function buildHelpers(view: ViewWindow, layout: ChartLayout) {
 // Core render function
 // ---------------------------------------------------------------------------
 
+/**
+ * Stable id for a timeline event. S6 resolves it back to the full event via
+ * `useChartMutationStore.timelineLayers[layerId].events[eventIndex]`.
+ *
+ *   format: `timeline:<layerId>:<eventIndex>`
+ */
+export function timelineEventId(layerId: string, eventIndex: number): string {
+  return `timeline:${layerId}:${eventIndex}`;
+}
+
+/** A single timeline event collected for the clustered dispatch-notch pass. */
+interface CollectedEvent extends NotchItem {
+  evt: TimelineEvent;
+}
+
 export function renderTimelineEvents(
   ctx: CanvasRenderingContext2D,
   rc: RenderContext,
@@ -91,40 +109,59 @@ export function renderTimelineEvents(
   ctx.save();
   ctx.font = LABEL_FONT;
 
+  // Collect events for the clustered notch pass. `range` still shades its span
+  // band inline (the notch hotspot anchors at `ts`); pin/vline render ONLY as a
+  // notch (no double-up).
+  const collected: CollectedEvent[] = [];
   for (const layer of layerList) {
-    for (const evt of layer.events) {
+    layer.events.forEach((evt, eventIndex) => {
       const barIdx = nearestBarIndex(bars, evt.ts);
       const cx = xToPx(barIdx + 0.5);
 
       // Skip events outside the visible window (with a small buffer).
-      if (cx < layout.x - 20 || cx > layout.x + layout.w + 20) continue;
+      if (cx < layout.x - 20 || cx > layout.x + layout.w + 20) return;
 
       const color = evt.color ?? DEFAULT_EVENT_COLOR;
 
-      // `range` keeps its fixed 4-bar width (we have only one ts per event).
-      const cx2 =
-        evt.kind === 'range'
-          ? xToPx(Math.min(barIdx + 4, bars.length - 1) + 0.5)
-          : undefined;
+      if (evt.kind === 'range') {
+        const cx2 = xToPx(Math.min(barIdx + 4, bars.length - 1) + 0.5);
+        drawTimelineGlyph(ctx, 'range', { cx, cx2, layout }, color, evt.label);
+      }
 
-      const anchor = drawTimelineGlyph(ctx, evt.kind, { cx, cx2, layout }, color, evt.label);
-
-      const kind =
-        evt.kind === 'pin'
-          ? 'timelinePin'
-          : evt.kind === 'vline'
-            ? 'timelineVline'
-            : 'timelineRange';
-      rc.hitRegions?.push({
-        ...anchor,
-        r: evt.kind === 'pin' ? DOT_RADIUS_PX : anchor.r,
-        kind,
-        payload: evt,
-      });
-    }
+      collected.push({ eventId: timelineEventId(layer.id, eventIndex), barIdx, cx, color, evt });
+    });
   }
 
+  renderEventNotches(ctx, rc, collected, 0);
+
   ctx.restore();
+}
+
+/**
+ * Clustered dispatch-notch pass — thin shim over the shared `renderNotchPass`.
+ * Provides the timeline-layer-specific HitRegion kind ('timelinePin') and the
+ * back-compat payload shape for OverlayInfoPanel.timelinePanel.
+ */
+function renderEventNotches(
+  ctx: CanvasRenderingContext2D,
+  rc: RenderContext,
+  events: CollectedEvent[],
+  paneIndex: number,
+): void {
+  renderNotchPass(ctx, rc, events, paneIndex, {
+    hitKind: 'timelinePin',
+    buildPayload(group, cxCenter, pIdx) {
+      const first = group[0]!;
+      return {
+        eventIds: group.map((g) => g.eventId),
+        paneIndex: pIdx,
+        cxCenter,
+        // Back-compat single-event fields for OverlayInfoPanel.timelinePanel:
+        // spread the first member so {label, ts, color, kind} are all present.
+        ...first.evt,
+      };
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------

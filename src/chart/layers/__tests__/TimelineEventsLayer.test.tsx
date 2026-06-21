@@ -6,9 +6,14 @@
  * confirm the right number of glyphs render for a given input.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { renderTimelineEvents } from '../TimelineEventsLayer';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  renderTimelineEvents,
+  timelineEventId,
+  _resetNotchTokens,
+} from '../TimelineEventsLayer';
 import type { RenderContext } from '../../types';
+import type { HitRegion } from '../../hitRegions';
 import type { TimelineLayer } from '../../../stores/useChartMutationStore';
 
 // ---------------------------------------------------------------------------
@@ -23,11 +28,14 @@ function makeCtx() {
     beginPath: vi.fn(() => calls.push('beginPath')),
     moveTo: vi.fn(() => calls.push('moveTo')),
     lineTo: vi.fn(() => calls.push('lineTo')),
+    arc: vi.fn(() => calls.push('arc')),
+    arcTo: vi.fn(() => calls.push('arcTo')),
     closePath: vi.fn(() => calls.push('closePath')),
     fill: vi.fn(() => calls.push('fill')),
     stroke: vi.fn(() => calls.push('stroke')),
     fillRect: vi.fn(() => calls.push('fillRect')),
     fillText: vi.fn(() => calls.push('fillText')),
+    measureText: vi.fn(() => ({ width: 20 })),
     setLineDash: vi.fn(),
     font: '',
     textAlign: '' as CanvasTextAlign,
@@ -47,7 +55,7 @@ function makeCtx() {
 // Minimal render context factory
 // ---------------------------------------------------------------------------
 
-function makeRC(barCount = 10): RenderContext {
+function makeRC(barCount = 10, hitRegions?: HitRegion[]): RenderContext {
   const bars = Array.from({ length: barCount }, (_, i) => ({
     ts: (i + 1) * 60_000, // 1-minute bars
     o: 100, h: 110, l: 90, c: 105, v: 1000,
@@ -59,6 +67,7 @@ function makeRC(barCount = 10): RenderContext {
     theme: { up: '#0f0', down: '#f00', grid: '#111', hairline: '#222', fg: '#aaa', bg: '#000' },
     dpr: 1,
     layout: { x: 10, y: 10, w: 400, h: 200 },
+    hitRegions,
   };
 }
 
@@ -67,6 +76,8 @@ function makeRC(barCount = 10): RenderContext {
 // ---------------------------------------------------------------------------
 
 describe('renderTimelineEvents', () => {
+  beforeEach(() => _resetNotchTokens());
+
   it('renders nothing when layers record is empty', () => {
     const rc = makeRC();
     const ctx = rc.ctx as unknown as ReturnType<typeof makeCtx>;
@@ -86,40 +97,63 @@ describe('renderTimelineEvents', () => {
     expect(ctx.calls).toEqual([]);
   });
 
-  it('renders a fill call for each pin event', () => {
-    const rc = makeRC(10);
+  it('renders each event as a dispatch notch with a generous hit region', () => {
+    const hitRegions: HitRegion[] = [];
+    const rc = makeRC(10, hitRegions);
     const ctx = rc.ctx as unknown as ReturnType<typeof makeCtx>;
     const layer: TimelineLayer = {
       id: 'l1',
       name: 'FOMC',
       events: [
-        { ts: 120_000, label: 'Pin A', kind: 'pin' },
-        { ts: 360_000, label: 'Pin B', kind: 'pin' },
+        { ts: 120_000, label: 'Pin A', kind: 'pin' }, // bar 1
+        { ts: 360_000, label: 'Pin B', kind: 'pin' }, // bar 5
       ],
     };
     renderTimelineEvents(rc.ctx, rc, { l1: layer });
-    // Each pin draws a diamond (fill) + a fillText for the label.
-    const fillCount = ctx.calls.filter((c) => c === 'fill').length;
-    const textCount = ctx.calls.filter((c) => c === 'fillText').length;
-    expect(fillCount).toBe(2); // one diamond per pin
-    expect(textCount).toBe(2); // one label per pin
+
+    // Notches are roundRect tabs (arcTo) + fill — no diamond/label text.
+    expect(ctx.calls.filter((c) => c === 'fillText').length).toBe(0);
+    expect(ctx.calls.filter((c) => c === 'arcTo').length).toBeGreaterThanOrEqual(1);
+
+    // Two distinct bars → two full-pane-height COLUMN hit regions, kind 'timelinePin'.
+    expect(hitRegions.length).toBe(2);
+    for (const r of hitRegions) {
+      expect(r.kind).toBe('timelinePin');
+      // New target model: a full-pane-height column (not a radius circle).
+      expect(r.shape).toBe('column');
+      expect(r.y).toBe(10); // pane top (layout.y)
+      expect(r.y2).toBe(210); // pane bottom (layout.y + layout.h)
+      expect((r.x2 ?? 0) - r.x).toBeGreaterThanOrEqual(36); // ≥36px wide (±18)
+      expect((r.payload as { eventIds: string[] }).eventIds.length).toBe(1);
+      expect((r.payload as { paneIndex: number }).paneIndex).toBe(0);
+    }
   });
 
-  it('renders a stroke (vertical line) for vline events', () => {
-    const rc = makeRC(10);
+  it('merges coincident events into ONE notch carrying every eventId + count badge', () => {
+    const hitRegions: HitRegion[] = [];
+    const rc = makeRC(10, hitRegions);
     const ctx = rc.ctx as unknown as ReturnType<typeof makeCtx>;
     const layer: TimelineLayer = {
-      id: 'l2',
-      name: 'Rate decision',
-      events: [{ ts: 240_000, label: 'FOMC', kind: 'vline' }],
+      id: 'l1',
+      name: 'FOMC',
+      events: [
+        { ts: 120_000, label: 'A', kind: 'pin' }, // bar 1
+        { ts: 120_000, label: 'B', kind: 'vline' }, // bar 1 (coincident)
+      ],
     };
-    renderTimelineEvents(rc.ctx, rc, { l2: layer });
-    const strokeCount = ctx.calls.filter((c) => c === 'stroke').length;
-    expect(strokeCount).toBeGreaterThanOrEqual(1);
+    renderTimelineEvents(rc.ctx, rc, { l1: layer });
+
+    // One cluster → one hit region carrying BOTH ids (in event order).
+    expect(hitRegions.length).toBe(1);
+    const payload = hitRegions[0]!.payload as { eventIds: string[] };
+    expect(payload.eventIds).toEqual([timelineEventId('l1', 0), timelineEventId('l1', 1)]);
+    // A count badge (text) renders for N>1 (badge digit via fillText).
+    expect(ctx.calls.filter((c) => c === 'fillText').length).toBe(1);
   });
 
-  it('renders fillRect for range events', () => {
-    const rc = makeRC(10);
+  it('renders fillRect span for range events (the notch hotspot anchors at ts)', () => {
+    const hitRegions: HitRegion[] = [];
+    const rc = makeRC(10, hitRegions);
     const ctx = rc.ctx as unknown as ReturnType<typeof makeCtx>;
     const layer: TimelineLayer = {
       id: 'l3',
@@ -127,7 +161,9 @@ describe('renderTimelineEvents', () => {
       events: [{ ts: 180_000, label: 'Range', kind: 'range' }],
     };
     renderTimelineEvents(rc.ctx, rc, { l3: layer });
-    const rectCount = ctx.calls.filter((c) => c === 'fillRect').length;
-    expect(rectCount).toBe(1);
+    // The range still shades its span.
+    expect(ctx.calls.filter((c) => c === 'fillRect').length).toBe(1);
+    // And registers exactly one notch hotspot at its start ts.
+    expect(hitRegions.length).toBe(1);
   });
 });

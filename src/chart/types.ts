@@ -31,6 +31,57 @@ export interface ChartLayout {
 }
 
 /**
+ * ── Stacked-pane model (S2) ─────────────────────────────────────────────────
+ *
+ * A sub-chart pane sits below the main price chart for non-price-scaled series
+ * (e.g. RSI 0–100). All panes SHARE the time axis via the single
+ * `ViewWindow.start/end`; each pane owns an INDEPENDENT y-scale (`PaneView`).
+ *
+ * LOW-RIPPLE by design: `RenderContext.layout` stays a single `ChartLayout`
+ * rect = the ACTIVE pane's rect. Individual layer renderers
+ * (GenericResearchLayer, StrategyOverlayLayer, TimelineEventsLayer,
+ * drawGrid/drawYAxis/drawXAxis) are UNCHANGED — they still read one rect + one
+ * view. The S4 draw coordinator in ChartCanvas loops the panes and dispatches
+ * each layer once per pane with THAT pane's rect + view.
+ *
+ * `projection.ts` is untouched: `barIdxToPx(idx, view, layout)` already accepts
+ * any rect, so feeding it a sub-pane's rect makes x-sync across panes automatic.
+ */
+
+/** One stacked pane in the chart. */
+export interface Pane {
+  /** 'price' = the main candle/line chart; 'series' = a non-price sub-pane (e.g. RSI). */
+  kind: 'price' | 'series';
+  /** Optional axis/title label for the pane (e.g. "RSI"). */
+  label?: string;
+}
+
+/**
+ * Per-pane y-bounds. The x-range is shared via `ViewWindow.start/end`, so a
+ * PaneView holds ONLY the pane's independent y scale.
+ */
+export interface PaneView {
+  yMin: number;
+  yMax: number;
+}
+
+/**
+ * Full stacked-layout state, consumed ONLY by ChartCanvas's S4 draw
+ * coordinator — never by an individual layer. Each entry bundles a pane, its
+ * y-scale, and its computed rect so the coordinator can, in one loop, build a
+ * per-pane `RenderContext` (`layout = rect`, `view = {start, end, ...pane.view}`)
+ * and dispatch the layers. Bundled (vs parallel arrays) so a pane and its
+ * view/rect can never drift out of index-sync.
+ */
+export interface LayoutState {
+  panes: Array<{
+    pane: Pane;
+    view: PaneView;
+    rect: ChartLayout;
+  }>;
+}
+
+/**
  * Theme tokens resolved from CSS custom properties at runtime.
  * ChartCanvas reads these once on mount via getComputedStyle(document.documentElement).
  */
