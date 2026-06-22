@@ -99,6 +99,31 @@ pub(crate) fn build_argv(cli_path: &str, claude_home: &Path) -> Vec<String> {
 }
 
 // ---------------------------------------------------------------------------
+// Session pruning (self-healing cap)
+// ---------------------------------------------------------------------------
+
+/// Remove sessions whose child process has already exited.
+///
+/// The session cap in `terminal_spawn` counts every entry in the map, but a
+/// dead session is only removed asynchronously (the reader task's deferred
+/// `rt.spawn(... remove ...)` or a fire-and-forget `terminal_kill`). On rapid
+/// open→close cycles that removal can lag or be lost, leaving stale dead
+/// entries that pile up to MAX_SESSIONS and wrongly trip the cap. Pruning
+/// these before the cap check makes the cap self-healing.
+///
+/// Uses non-blocking `try_wait` (never the blocking `wait`). A session is kept
+/// when it is still running (`Ok(None)`) or when `try_wait` errors — being
+/// conservative on error so a transient hiccup never evicts a live PTY.
+fn prune_exited(map: &mut HashMap<String, Arc<TerminalSession>>) {
+    map.retain(|_, session| {
+        // Keep unless try_wait proves the child has already exited.
+        // Conservative on error (Err / Ok(None) → keep) so a transient hiccup
+        // never evicts a live PTY.
+        !matches!(session.child.lock().unwrap().try_wait(), Ok(Some(_)))
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Tauri commands
 // ---------------------------------------------------------------------------
 
@@ -134,10 +159,17 @@ pub async fn terminal_spawn(
     args: TerminalSpawnArgs,
 ) -> Result<TerminalSpawnResult, String> {
     // ------------------------------------------------------------------
-    // Cap check
+    // Cap check (self-healing)
     // ------------------------------------------------------------------
     {
-        let map = state.sessions.lock().await;
+        let mut map = state.sessions.lock().await;
+        // Self-heal: drop sessions whose child has already exited but whose
+        // async removal (reader task's deferred rt.spawn / terminal_kill) lagged
+        // or was lost. Without this, rapid open→close cycles leave stale dead
+        // entries that accumulate to MAX_SESSIONS and wrongly trip the cap even
+        // when no terminal is actually open. Prune first so the cap reflects
+        // only LIVE PTYs, not zombie map entries.
+        prune_exited(&mut map);
         if map.len() >= MAX_SESSIONS {
             return Err("max_sessions_reached".to_string());
         }
@@ -640,6 +672,51 @@ mod tests {
         assert!(
             would_be_rejected,
             "A 5th spawn must be rejected when {MAX_SESSIONS} sessions are active"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: prune_exited frees the cap for sessions whose child has exited
+    // -----------------------------------------------------------------------
+    //
+    // Regression for the session-leak bug: rapid open→close cycles leave dead
+    // entries in the map (their async removal lagged/was lost), accumulating to
+    // MAX_SESSIONS and wrongly tripping "max_sessions_reached". prune_exited
+    // must drop those zombie entries so the cap reflects only live PTYs.
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn prune_exited_frees_cap() {
+        let ts = TerminalState::default();
+
+        // Fill the map to the cap with stub sessions whose child is `true` —
+        // it exits immediately, so by the time we prune the children are gone.
+        {
+            let mut map = ts.sessions.lock().await;
+            for _ in 0..MAX_SESSIONS {
+                map.insert(Uuid::new_v4().to_string(), stub_session());
+            }
+            assert_eq!(map.len(), MAX_SESSIONS);
+        }
+
+        // Give the `true` children a moment to reach exit so try_wait reports it.
+        for _ in 0..50 {
+            {
+                let mut map = ts.sessions.lock().await;
+                prune_exited(&mut map);
+                if map.is_empty() {
+                    break;
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+
+        let map = ts.sessions.lock().await;
+        assert!(
+            map.is_empty(),
+            "prune_exited must drop sessions whose child has exited so the cap \
+             frees up — remaining: {}",
+            map.len()
         );
     }
 }
