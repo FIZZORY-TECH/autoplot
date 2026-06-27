@@ -34,6 +34,7 @@
 import type { Bar } from '../../data/MarketDataProvider';
 import type {
   ResearchOverlay,
+  Element as ResearchElement,
   LineElement,
   BandElement,
   HLineElement,
@@ -74,6 +75,19 @@ function parseDash(el: { dash?: string }): number[] {
     _dashCache.set(el, parsed);
   }
   return parsed;
+}
+
+/**
+ * Which pane an element belongs to (S5a). Only `line` / `band` / `hline` carry a
+ * `pane` field; every other element type (markers, event_mark, text, hotspot) is
+ * always price-pane. ABSENT `pane` ⇒ `'price'` — preserving today's exact
+ * behavior (price pass, contributes to price y-bounds) byte-for-byte.
+ */
+function elementPane(el: ResearchElement): 'price' | 'series' {
+  if (el.type === 'line' || el.type === 'band' || el.type === 'hline') {
+    return el.pane ?? 'price';
+  }
+  return 'price';
 }
 
 // One-shot guards (per overlay id) for the align:'index' mismatch path.
@@ -156,10 +170,19 @@ export function seriesStartFor(
  * barCount) — NOT the visible-edge 'right-aligned' used by custom/AI series.
  * align:'index'→'bar-aligned'. An hline is a constant price across all bars and
  * is contributed as a { constant } source (always inside the window).
+ *
+ * S5a — `pane` selects which pane's elements contribute. The default `'price'`
+ * keeps today's behavior (only price-pane / absent-pane elements widen the price
+ * y-bounds); 5b passes this through so a `pane:'series'` element is excluded from
+ * the price union and instead scaled in its own sub-pane.
  */
-export function researchOverlayValueSources(ro: ResearchOverlay): OverlayValueSource[] {
+export function researchOverlayValueSources(
+  ro: ResearchOverlay,
+  pane: 'price' | 'series' = 'price',
+): OverlayValueSource[] {
   const out: OverlayValueSource[] = [];
   for (const el of ro.elements) {
+    if (elementPane(el) !== pane) continue;
     if (el.type === 'line') {
       out.push({
         values: el.values,
@@ -688,6 +711,13 @@ export function renderResearchOverlays(
 
   const h = makeHelpers(view, layout, bars.length);
 
+  // S5a — which pane this pass targets. ABSENT ⇒ 'price', so the single-pane /
+  // price pass renders EXACTLY as before; an element is skipped unless its pane
+  // matches. The colorIdx still advances per overlay (not per rendered element)
+  // so an overlay keeps a STABLE palette slot across both the price and series
+  // passes — its series-pane line gets the same color it would on the price pane.
+  const targetPane = rc.pane ?? 'price';
+
   // Per-overlay color index (stable order via Object.values insertion order),
   // used by validateResearchColor → colorForIndex for rejected/missing colors.
   //
@@ -700,6 +730,7 @@ export function renderResearchOverlays(
   for (const overlay of overlayList) {
     const colorIdx = overlayIdx++;
     overlay.elements.forEach((el, elementIndex) => {
+      if (elementPane(el) !== targetPane) return;
       switch (el.type) {
         case 'line':
           renderLine(ctx, rc, h, el, overlay, colorIdx);

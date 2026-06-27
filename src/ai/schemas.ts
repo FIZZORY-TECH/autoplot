@@ -200,6 +200,9 @@ export const LineElement = z.object({
   color: z.string().optional(),
   width: z.number().optional(),
   dash: z.string().optional(),
+  /** Backward-compatible: absent ⇒ treated as `'price'` (today's exact behavior,
+   *  contributes to price y-bounds). `'series'` places the line in its own pane. */
+  pane: z.enum(['price', 'series']).optional(),
 });
 export type LineElement = z.infer<typeof LineElement>;
 
@@ -211,6 +214,9 @@ export const BandElement = z.object({
   align: OverlayAlign,
   color: z.string().optional(),
   opacity: z.number().optional(),
+  /** Backward-compatible: absent ⇒ treated as `'price'` (today's exact behavior,
+   *  contributes to price y-bounds). `'series'` places the band in its own pane. */
+  pane: z.enum(['price', 'series']).optional(),
 });
 export type BandElement = z.infer<typeof BandElement>;
 
@@ -221,6 +227,9 @@ export const HLineElement = z.object({
   label: z.string().optional(),
   color: z.string().optional(),
   dash: z.string().optional(),
+  /** Backward-compatible: absent ⇒ treated as `'price'` (today's exact behavior,
+   *  contributes to price y-bounds). `'series'` places the hline in its own pane. */
+  pane: z.enum(['price', 'series']).optional(),
 });
 export type HLineElement = z.infer<typeof HLineElement>;
 
@@ -316,6 +325,9 @@ export const ResearchOverlay = z.object({
   label: z.string(),
   /** Optional default color for elements that omit their own. */
   color: z.string().optional(),
+  /** Backward-compatible: absent ⇒ no legend badge. `'pine'` = PineScript-derived
+   *  overlay; `'nl'` = natural-language-derived overlay. */
+  source: z.enum(['pine', 'nl']).optional(),
   /** Heterogeneous element list — max 50. */
   elements: z.array(Element).max(50),
 });

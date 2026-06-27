@@ -441,3 +441,90 @@ describe('atr', () => {
     expect(atr(bs, 14)).toEqual([null]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Pine→indicator skill: deterministic compute round-trips
+//
+// These tests verify the engine contracts relied on by the Pine→indicator
+// skill (feature/pinescript-to-indicator-skill). They use small, fully
+// deterministic Bar/close series so the expected values can be verified
+// by hand without a fixture file.
+// ---------------------------------------------------------------------------
+
+describe('Pine skill compute round-trip: sma', () => {
+  // Deterministic 8-close series: [10, 11, 12, 13, 14, 15, 16, 17]
+  // SMA(3): first 2 positions null, then rolling mean of 3.
+  //   index 2: (10+11+12)/3 = 11
+  //   index 3: (11+12+13)/3 = 12
+  //   index 7: (15+16+17)/3 = 16
+  const closes = [10, 11, 12, 13, 14, 15, 16, 17];
+
+  it('output length equals input length', () => {
+    const result = sma(closes, 3);
+    expect(result.length).toBe(closes.length);
+  });
+
+  it('first (period-1) values are null', () => {
+    const result = sma(closes, 3);
+    expect(result[0]).toBeNull();
+    expect(result[1]).toBeNull();
+  });
+
+  it('index 2 equals hand-computed (10+11+12)/3', () => {
+    const result = sma(closes, 3);
+    expect(result[2]).toBeCloseTo(11, 12);
+  });
+
+  it('index 7 equals hand-computed (15+16+17)/3', () => {
+    const result = sma(closes, 3);
+    expect(result[7]).toBeCloseTo(16, 12);
+  });
+});
+
+describe('Pine skill compute round-trip: rsi', () => {
+  // Deterministic 12-close series (period=5).
+  // RSI requires `period` changes before emitting the first value,
+  // so the first `period` (5) output slots must be null.
+  const closes = [44, 46, 43, 48, 50, 47, 52, 55, 51, 53, 58, 56];
+
+  it('output length equals input length', () => {
+    const result = rsi(closes, 5);
+    expect(result.length).toBe(closes.length);
+  });
+
+  it('first `period` (5) values are null', () => {
+    const result = rsi(closes, 5);
+    for (let i = 0; i < 5; i++) {
+      expect(result[i]).toBeNull();
+    }
+  });
+
+  it('first non-null value is at index 5', () => {
+    const result = rsi(closes, 5);
+    expect(result[5]).not.toBeNull();
+  });
+
+  it('all non-null values are in [0, 100]', () => {
+    const result = rsi(closes, 5);
+    result
+      .filter((v): v is number => v !== null)
+      .forEach((v) => {
+        expect(v).toBeGreaterThanOrEqual(0);
+        expect(v).toBeLessThanOrEqual(100);
+      });
+  });
+
+  it('RSI is above 50 when recent closes rise, below 50 when they fall', () => {
+    // Strictly increasing series → all gains, no losses → RSI = 100.
+    const rising = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    const risingResult = rsi(rising, 5);
+    const risingNonNull = risingResult.filter((v): v is number => v !== null);
+    risingNonNull.forEach((v) => expect(v).toBeGreaterThan(50));
+
+    // Strictly decreasing series → all losses, no gains → RSI = 0.
+    const falling = [19, 18, 17, 16, 15, 14, 13, 12, 11, 10];
+    const fallingResult = rsi(falling, 5);
+    const fallingNonNull = fallingResult.filter((v): v is number => v !== null);
+    fallingNonNull.forEach((v) => expect(v).toBeLessThan(50));
+  });
+});

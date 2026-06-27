@@ -58,6 +58,9 @@ interface LegendRow {
   label: string;
   /** Optional small mono detail (e.g. "SMA 20"). */
   desc?: string;
+  /** Provenance badge — 'pine' for PineScript-derived, 'nl' for AI/natural-language.
+   *  Absent for all non-research rows (backward-compatible). */
+  source?: 'pine' | 'nl';
   /** Render color of the overlay (the dot). */
   color: string;
   /** Whether the row is currently visible. */
@@ -230,6 +233,8 @@ export function LegendHUD({ hiddenOverlayIds, setHiddenOverlayIds }: LegendHUDPr
         id,
         label: ro.label || ro.id,
         desc: 'Research',
+        // Propagate the optional provenance badge — 'pine' | 'nl' | undefined.
+        source: ro.source,
         // The renderer derives element colors via validateResearchColor →
         // colorForIndex(overlayIdx); the overlay's default color (if any) is the
         // closest legend-dot proxy, else the same index fallback.
@@ -325,6 +330,12 @@ export function LegendHUD({ hiddenOverlayIds, setHiddenOverlayIds }: LegendHUDPr
           />
           <span className="legend-hud-label">{row.label}</span>
           {row.desc && <span className="legend-hud-desc">{row.desc}</span>}
+          {row.source === 'pine' && (
+            <span className="legend-hud-badge legend-hud-badge--pine" aria-label="PineScript overlay">Pine</span>
+          )}
+          {row.source === 'nl' && (
+            <span className="legend-hud-badge legend-hud-badge--nl" aria-label="AI-generated overlay">AI</span>
+          )}
           <button
             type="button"
             className="legend-hud-eye"

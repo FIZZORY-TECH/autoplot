@@ -41,6 +41,7 @@ import { ASSETS } from '../data/assets';
 import { defaultQuoteForProvider } from '../stores/useWatchlistStore';
 
 import { barIdxToPx, priceToPx } from './projection';
+import { collectOverlayExtremes, type OverlayValueSource } from './overlayExtremes';
 
 import type {
   ChartLayout,
@@ -118,6 +119,51 @@ function seriesPaneStart(align: 'right' | 'index', valuesLen: number, barCount: 
 }
 
 /**
+ * Generic sub-pane view cache helper — avoids duplicating the 5-field
+ * cache pattern for each sub-pane type. Keys on `key` identity (===) plus
+ * view.start/end and barCount; calls `compute()` only on a miss.
+ *
+ * The two callers keep SEPARATE useRefs (series cache keys on the values
+ * array; research cache keys on the OverlayValueSource[] array) so their
+ * invalidation domains remain independent.
+ */
+function cachedPaneView<K>(
+  ref: { current: { key: K; start: number; end: number; barCount: number; result: PaneView } | null },
+  key: K,
+  view: ViewWindow,
+  barCount: number,
+  compute: () => PaneView,
+): PaneView {
+  const c = ref.current;
+  if (c !== null && c.key === key && c.start === view.start && c.end === view.end && c.barCount === barCount) {
+    return c.result;
+  }
+  const result = compute();
+  ref.current = { key, start: view.start, end: view.end, barCount, result };
+  return result;
+}
+
+/**
+ * Shared padding/fallback tail for sub-pane y-range helpers. Given the raw
+ * [lo, hi] extremes over the visible window, returns a PaneView with:
+ *   • a sane fallback [0,1] when no finite point was found;
+ *   • flat-line breathing room when lo === hi;
+ *   • fractional headroom otherwise (SUBPANE_Y_PAD_FRACTION).
+ */
+function applySubPanePadding(lo: number, hi: number): PaneView {
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+    return { yMin: 0, yMax: 1 };
+  }
+  if (lo === hi) {
+    // Flat line — give it a unit of breathing room so the axis renders ticks.
+    const pad = Math.abs(lo) > 1e-9 ? Math.abs(lo) * 0.1 : 1;
+    return { yMin: lo - pad, yMax: hi + pad };
+  }
+  const pad = (hi - lo) * SUBPANE_Y_PAD_FRACTION;
+  return { yMin: lo - pad, yMax: hi + pad };
+}
+
+/**
  * Compute the sub-pane y-range from the VISIBLE bar slice [view.start, view.end)
  * of the series — recomputed every frame so panning/zooming the (shared) time
  * axis re-fits the sub-pane scale. Adds fractional headroom so the line never
@@ -143,16 +189,25 @@ function computeSeriesPaneView(
     if (v < min) min = v;
     if (v > max) max = v;
   }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    return { yMin: 0, yMax: 1 };
-  }
-  if (min === max) {
-    // Flat line — give it a unit of breathing room so the axis renders ticks.
-    const pad = Math.abs(min) > 1e-9 ? Math.abs(min) * 0.1 : 1;
-    return { yMin: min - pad, yMax: max + pad };
-  }
-  const pad = (max - min) * SUBPANE_Y_PAD_FRACTION;
-  return { yMin: min - pad, yMax: max + pad };
+  return applySubPanePadding(min, max);
+}
+
+/**
+ * S5b — independent y-range for a RESEARCH series sub-pane, computed from the
+ * series-pane elements' value sources over the VISIBLE window. Reuses
+ * `collectOverlayExtremes` (which already speaks line/band/hline + the
+ * bar/data-right alignment modes that `researchOverlayValueSources(ro,'series')`
+ * emits) so the sub-pane scale is exactly the union the price axis would have
+ * gotten — minus the price-pane elements. Adds the same fractional headroom as
+ * `computeSeriesPaneView` and falls back to a sane range when empty.
+ */
+function computeResearchSubPaneView(
+  sources: OverlayValueSource[],
+  view: ViewWindow,
+  barCount: number,
+): PaneView {
+  const { lo, hi } = collectOverlayExtremes(sources, view.start, view.end, barCount);
+  return applySubPanePadding(lo, hi);
 }
 
 /**
@@ -328,6 +383,32 @@ export interface SeriesPaneInput {
   color?: string;
 }
 
+/**
+ * S5b — a research overlay that carries `pane:'series'` element(s) (e.g. a
+ * converted RSI line) that must render in the chart's own stacked sub-pane on an
+ * INDEPENDENT y-scale — even when there is NO built-in `seriesPane` dataset.
+ *
+ * The `overlays` prop is an OPAQUE renderer array (ChartCanvas can't see element
+ * data), so AppShell threads the research renderer + the series-pane value
+ * sources here. ChartCanvas:
+ *   1. allocates a sub-pane when this is present (or the built-in `seriesPane` is),
+ *   2. computes the sub-pane's independent y-scale from `valueSources` (mirrors
+ *      the price-axis union, but over the series-pane elements only), and
+ *   3. runs a SECOND, research-only dispatch with `pane:'series'` so the renderer
+ *      draws ONLY its `pane:'series'` elements onto that sub-pane.
+ *
+ * Absent / null → no research sub-pane (behavior byte-for-byte as before).
+ */
+export interface ResearchSubPane {
+  /** The SAME research renderer used on the price pass (stable ref). Invoked a
+   *  second time with `pane:'series'` so it draws only its series-pane elements. */
+  renderer: ChartRenderer;
+  /** Value sources of the series-pane elements, for the independent y-scale. */
+  valueSources: OverlayValueSource[];
+  /** Optional title chip text (e.g. "RSI"). */
+  title?: string;
+}
+
 interface ChartCanvasProps {
   bars: Bar[];
   view: ViewWindow;
@@ -401,6 +482,17 @@ interface ChartCanvasProps {
    * behaving EXACTLY as before (no regression). Only ONE sub-pane is wired.
    */
   seriesPane?: SeriesPaneInput;
+  /**
+   * S5b — when set (and no built-in `seriesPane` dataset is active), a research
+   * overlay's `pane:'series'` element(s) render in a stacked sub-pane below price
+   * on their OWN y-scale, computed from `valueSources` so the 0–100 oscillator
+   * never stretches the price axis. Absent/null → no research sub-pane.
+   *
+   * SINGLE-SUB-PANE LIMIT (MVP): if BOTH this AND `seriesPane` are active, the
+   * built-in `seriesPane` dataset keeps the sub-pane and this is ignored — we do
+   * NOT stack two oscillator panes. See the allocation block in `drawFrame`.
+   */
+  researchSubPane?: ResearchSubPane | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -467,6 +559,7 @@ export function ChartCanvas({
   onHotspotChange,
   onNotchClustersChange,
   seriesPane,
+  researchSubPane,
 }: ChartCanvasProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -763,7 +856,7 @@ export function ChartCanvas({
   // array reference or barCount shift), which are the exact cases that require
   // a recompute.
   const paneViewCacheRef = useRef<{
-    valuesRef: readonly (number | null | undefined)[];
+    key: readonly (number | null | undefined)[];
     start: number;
     end: number;
     barCount: number;
@@ -773,21 +866,30 @@ export function ChartCanvas({
     series: SeriesPaneInput,
     view: ViewWindow,
     barCount: number,
-  ): PaneView => {
-    const c = paneViewCacheRef.current;
-    if (
-      c !== null &&
-      c.valuesRef === series.values &&
-      c.start === view.start &&
-      c.end === view.end &&
-      c.barCount === barCount
-    ) {
-      return c.result;
-    }
-    const result = computeSeriesPaneView(series, view, barCount);
-    paneViewCacheRef.current = { valuesRef: series.values, start: view.start, end: view.end, barCount, result };
-    return result;
-  };
+  ): PaneView =>
+    cachedPaneView(paneViewCacheRef, series.values, view, barCount, () =>
+      computeSeriesPaneView(series, view, barCount),
+    );
+
+  // S5b — cache for computeResearchSubPaneView. Keyed on (sources identity,
+  // view.start, view.end, barCount) — the exact invalidation set: pan/zoom (view
+  // change) and a new value-sources array (overlay apply/remove/visibility from
+  // AppShell's memo). Mirrors `paneViewCacheRef` above.
+  const researchPaneViewCacheRef = useRef<{
+    key: OverlayValueSource[];
+    start: number;
+    end: number;
+    barCount: number;
+    result: PaneView;
+  } | null>(null);
+  const computeResearchSubPaneViewCached = (
+    sources: OverlayValueSource[],
+    view: ViewWindow,
+    barCount: number,
+  ): PaneView =>
+    cachedPaneView(researchPaneViewCacheRef, sources, view, barCount, () =>
+      computeResearchSubPaneView(sources, view, barCount),
+    );
 
   // Load persisted trends whenever (sym, tf) changes. Mirrors the marks load
   // path in AppShell — failure is logged + falls back to an empty list so
@@ -1123,18 +1225,28 @@ export function ChartCanvas({
       const phase = loadingPhaseRef.current;
       const reduced = reducedMotionRef.current;
 
-      // ── S4 pane-stack layout ───────────────────────────────────────────
-      // Scale detection is purely kind-driven: the `seriesPane` prop is set by
-      // AppShell ONLY for a `kind === 'series'` dataset. When present we split
-      // the plot rect vertically (price pane shrinks; one series sub-pane below).
-      // The y-range for the sub-pane is recomputed from the VISIBLE slice every
+      // ── S4 / S5b pane-stack layout ─────────────────────────────────────
+      // A sub-pane is allocated for EITHER source, kind-driven (no value-range
+      // heuristic): the built-in `seriesPane` dataset (S4) OR a research overlay
+      // carrying `pane:'series'` element(s) (S5b, `researchSubPane`). In both
+      // cases the sub-pane's y-range is recomputed from the VISIBLE slice every
       // frame off the shared `animatedView`, so pan/zoom re-fits it in lockstep.
-      // When absent, `priceLayout === layout` → today's exact single-pane path.
+      // When neither is present, `priceLayout === layout` → today's exact
+      // single-pane path (byte-for-byte unchanged).
+      //
+      // SINGLE-SUB-PANE LIMIT (MVP): we never stack two oscillator panes. If BOTH
+      // are active at once, the built-in `seriesPane` dataset deterministically
+      // keeps the sub-pane (today's behavior) and the research-series pass is
+      // skipped — see `useResearchSubPane` below and the draw coordinator.
       const hasSeriesPane = !!seriesPane && seriesPane.values.length > 0;
+      const useResearchSubPane =
+        !hasSeriesPane &&
+        !!researchSubPane &&
+        researchSubPane.valueSources.length > 0;
       let priceLayout: ChartLayout = layout;
       let subPaneRect: ChartLayout | null = null;
       let subPaneView: PaneView | null = null;
-      if (hasSeriesPane && seriesPane) {
+      if (hasSeriesPane || useResearchSubPane) {
         const subH = Math.max(
           SUBPANE_MIN_PX,
           Math.round(layout.h * SUBPANE_HEIGHT_FRACTION),
@@ -1149,7 +1261,9 @@ export function ChartCanvas({
             w: layout.w,
             h: subH,
           };
-          subPaneView = computeSeriesPaneViewCached(seriesPane, animatedView, bars.length);
+          subPaneView = hasSeriesPane
+            ? computeSeriesPaneViewCached(seriesPane!, animatedView, bars.length)
+            : computeResearchSubPaneViewCached(researchSubPane!.valueSources, animatedView, bars.length);
         }
       }
 
@@ -1175,14 +1289,24 @@ export function ChartCanvas({
         ctx.restore();
       }
 
-      const makeRc = (): RenderContext => ({
+      // S5a — `makeRc()` defaults to the PRICE pane (no `pane` field ⇒ layers
+      // treat it as 'price', byte-for-byte as before). 5b will allocate the
+      // research sub-pane and run a SECOND research-only dispatch by calling
+      // `makeRc('series', subPaneRect, subViewWindow)` so the research layer
+      // draws its `pane:'series'` elements on that pane's independent y-scale.
+      const makeRc = (
+        pane: 'price' | 'series' = 'price',
+        layoutOverride?: ChartLayout,
+        viewOverride?: ViewWindow,
+      ): RenderContext => ({
         ctx,
         bars,
-        view: animatedView,
+        view: viewOverride ?? animatedView,
         theme,
         dpr,
-        layout: priceLayout,
+        layout: layoutOverride ?? priceLayout,
         hitRegions: hitRegionsRef.current,
+        pane: pane === 'series' ? pane : undefined,
       });
 
       // Phase-aware bars alpha. Exit: 0.18. Loading: 0.18 (bars likely []
@@ -1309,14 +1433,27 @@ export function ChartCanvas({
         drawYAxis(ctx, priceLayout, animatedView, theme);
       }
 
-      // ── S4 sub-pane draw coordinator ───────────────────────────────────
-      // The series sub-pane is the second entry in `paneStack.panes`. We draw,
-      // for that pane: a shared-time vertical grid spanning BOTH panes, its own
-      // horizontal grid + y-axis (its independent y-scale), the divider, the
-      // series polyline, and the title chip. The x-axis (time labels) renders
-      // ONCE at the bottom of the whole stack (below the sub-pane) — never per
-      // pane. No DOM, no hit regions (S5 owns series-attached events).
-      if (subPaneRect && subPaneView && seriesPane && phase === 'idle' && bars.length) {
+      // ── S4 / S5b sub-pane draw coordinator ─────────────────────────────
+      // For the (single) sub-pane we draw: a shared-time vertical grid spanning
+      // BOTH panes, its own horizontal grid + y-axis (its independent y-scale),
+      // the divider, the pane content, and a title chip. The x-axis (time labels)
+      // renders ONCE at the bottom of the whole stack — never per pane.
+      //
+      // The pane CONTENT differs by source (single-sub-pane MVP — exactly one of
+      // these runs, never both):
+      //   • built-in `seriesPane` dataset → `drawSeriesPaneLine` (S4, unchanged).
+      //   • research `pane:'series'` element(s) → a SECOND, research-only render
+      //     dispatch via `makeRc('series', subPaneRect, subViewWindow)` so the
+      //     renderer draws ONLY its series-pane elements on this sub-pane's scale.
+      //     No DOM, no hit regions (S5 owns series-attached events; this pass
+      //     still shares `hitRegionsRef`, but research series-pane elements push
+      //     none in the MVP element set).
+      //
+      // DEFERRED GENERALIZATION: `LayoutState` (src/chart/types.ts) already models
+      // `panes: Array<{pane, view, rect}>`. A future phase should migrate this
+      // ad-hoc two-source dispatch (built-in seriesPane vs research sub-pane as
+      // parallel locals) to iterate `LayoutState` instead.
+      if (subPaneRect && subPaneView && phase === 'idle' && bars.length) {
         const subViewWindow: ViewWindow = {
           start: animatedView.start,
           end: animatedView.end,
@@ -1330,17 +1467,31 @@ export function ChartCanvas({
         // Sub-pane horizontal grid + its own y-axis on its independent scale.
         drawGrid(ctx, subPaneRect, subViewWindow, theme);
         drawPaneDivider(ctx, subPaneRect, theme.hairline);
-        drawSeriesPaneLine(
-          ctx,
-          subPaneRect,
-          animatedView,
-          subPaneView,
-          seriesPane,
-          bars.length,
-          seriesPane.color ?? subPaneTokens.accent,
-        );
+        if (hasSeriesPane && seriesPane) {
+          // S4 — built-in series dataset line (today's path, unchanged).
+          drawSeriesPaneLine(
+            ctx,
+            subPaneRect,
+            animatedView,
+            subPaneView,
+            seriesPane,
+            bars.length,
+            seriesPane.color ?? subPaneTokens.accent,
+          );
+          drawSubPaneTitle(ctx, subPaneRect, seriesPane.label, subPaneTokens.ink1);
+        } else if (useResearchSubPane && researchSubPane) {
+          // S5b — second research-only dispatch on the sub-pane's independent
+          // scale. `makeRc('series', …)` stamps `pane:'series'` so the renderer
+          // draws ONLY its series-pane elements (price-pane elements were already
+          // drawn on the price pass above and are skipped here).
+          researchSubPane.renderer.render(
+            makeRc('series', subPaneRect, subViewWindow),
+          );
+          if (researchSubPane.title) {
+            drawSubPaneTitle(ctx, subPaneRect, researchSubPane.title, subPaneTokens.ink1);
+          }
+        }
         drawYAxis(ctx, subPaneRect, subViewWindow, theme);
-        drawSubPaneTitle(ctx, subPaneRect, seriesPane.label, subPaneTokens.ink1);
       }
 
       // X-axis (time labels) — ONCE at the bottom of the whole stack. When a
@@ -1405,7 +1556,7 @@ export function ChartCanvas({
   // Trigger draw whenever reactive inputs change.
   useEffect(() => {
     drawFrame.current?.();
-  }, [bars, animatedView, layout, theme, subPaneTokens, size.w, size.h, renderer, overlays, marks, trends, trendDraft, selectedTrendId, loadingPhase, seriesPane]);
+  }, [bars, animatedView, layout, theme, subPaneTokens, size.w, size.h, renderer, overlays, marks, trends, trendDraft, selectedTrendId, loadingPhase, seriesPane, researchSubPane]);
 
   // P2.5 — Project marks for the DOM hover layer (Comments only need a popover).
   const projectedMarks: ProjectedMark[] = useMemo(() => {

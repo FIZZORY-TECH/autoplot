@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hydrateAppState, mountAppStateSync, mountSettingsSync } from './lib/hydrate';
 import ChartCanvas from './chart/ChartCanvas';
-import type { ChartType, SeriesPaneInput } from './chart/ChartCanvas';
+import type { ChartType, ResearchSubPane, SeriesPaneInput } from './chart/ChartCanvas';
 import OverlayInfoPanel from './chart/OverlayInfoPanel';
 import EventListPopover from './chart/EventListPopover';
 import type { ExpandableEvent } from './chart/EventListPopover';
@@ -1107,6 +1107,40 @@ export default function AppShell() {
     genericResearchOverlay(() => researchFilter(researchOverlaysRef.current)),
   );
 
+  // S5b — research SUB-PANE seam. A converted oscillator (e.g. an RSI line
+  // carrying `pane:'series'`) must render in the chart's own sub-pane on an
+  // INDEPENDENT y-scale — even with NO built-in `seriesPane` dataset present.
+  // The `overlays` prop is opaque (ChartCanvas can't see element data), so we
+  // thread the SAME research renderer + the series-pane value sources here.
+  //
+  // The series value sources mirror the price union at `overlaySources` above
+  // (same VISIBLE/non-hidden guard via `hiddenOverlayIds`) but pane-filtered to
+  // 'series' — so the price y-axis already excludes these (the price union uses
+  // the default 'price' pane) and this sub-pane gets exactly the complement.
+  // `null` when no visible overlay carries a `pane:'series'` element → no sub-pane
+  // (behavior byte-for-byte as before).
+  // NOTE: this memo MUST produce a FRESH `valueSources` array on every recompute —
+  // ChartCanvas keys its sub-pane view cache on array identity, so reusing or
+  // filtering in-place would suppress invalidation when overlays change.
+  const researchSubPane = useMemo<ResearchSubPane | null>(() => {
+    const valueSources: OverlayValueSource[] = [];
+    let title: string | undefined;
+    for (const ro of Object.values(researchOverlays)) {
+      if (hiddenOverlayIds.has(overlayKey('research', ro.id))) continue;
+      const seriesSources = researchOverlayValueSources(ro, 'series');
+      if (seriesSources.length === 0) continue;
+      valueSources.push(...seriesSources);
+      // Title chip = label of the first overlay contributing a series-pane
+      // element (single-sub-pane MVP — all series elements share one pane/scale).
+      if (title === undefined) title = ro.label;
+    }
+    if (valueSources.length === 0) return null;
+    return { renderer: researchOverlayRenderer.current, valueSources, title };
+    // `researchOverlayVersion` forces a recompute on apply/remove/prune even
+    // though the renderer reads the stable `researchOverlaysRef` (matching the
+    // `overlays` memo's dep set). `researchOverlays` covers store-object changes.
+  }, [researchOverlays, hiddenOverlayIds, researchOverlayVersion]);
+
   // P7 W5-C12 — strategy signals overlay. Cached trades come from
   // `useAppStore.aiActiveStrategyTrades` (set by Composer when a strategy
   // is applied). When null/empty, the renderer is omitted entirely. This
@@ -1455,6 +1489,7 @@ export default function AppShell() {
           onNotchClustersChange={setNotchClusters}
           activeTool={activeTool}
           seriesPane={seriesPane}
+          researchSubPane={researchSubPane}
         />
         {/* Step 6 — shared overlay info card. Subscribes to useOverlayHitStore
             for the hover hit + click signal (so the shell never re-renders on
