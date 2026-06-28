@@ -1,6 +1,6 @@
 # Pine Script & NL → Chart Indicator
 
-description: Convert a user's Pine Script (TradingView) OR a plain-language indicator request into an autoplot research overlay by orchestrating the live MCP tools — detect the input, map the convertible subset, choose the right pane, and apply (and optionally save) the overlay. Invoke whenever the user pastes Pine Script or asks for a moving average / RSI / Bollinger / band / oscillator on the chart.
+description: Convert a user's Pine Script (TradingView) OR a plain-language indicator request into an autoplot research overlay by orchestrating the live MCP tools — detect the input, map the convertible subset, choose the right pane, emit a recipe field, and apply the overlay (persist-on-apply is automatic). Invoke whenever the user pastes Pine Script or asks for a moving average / RSI / Bollinger / band / oscillator on the chart.
 
 ---
 
@@ -31,15 +31,16 @@ Set the overlay's `source` field accordingly at the end: `source: 'pine'` for th
 Always run the tools in this order. The CLI lazy-loads MCP tool schemas; the research-overlay tools may need fetching first:
 
 ```
-ToolSearch select:apply_research_overlay,save_research_overlay,load_research_overlay,list_research_overlays,delete_research_overlay
+ToolSearch select:apply_research_overlay,load_research_overlay,list_research_overlays,delete_research_overlay
 ```
 
 1. `get_current_symbol` — returns the symbol on the chart now (e.g. `BTC-USD`). Use it as the overlay's `sym` unless the user named a different symbol.
 2. `get_visible_range` — returns `{ start, end, timeframe }`. Use its `timeframe` as the overlay's `tf` and to understand the window the user is looking at.
 3. For **each** series the script/request needs: `compute_indicator { sym, tf, kind, params }` — returns `{ values, align }`. The math runs in the engine; you only assemble the result.
-4. Assemble a single `ResearchOverlay` object whose `elements[]` holds the computed series (see the shapes below).
-5. `apply_research_overlay` with that overlay object to render it.
-6. Offer to `save_research_overlay` (same payload) so the user can reuse it later. Support reuse via `load_research_overlay { id }` when the user asks to bring a saved study back.
+4. Assemble a single `ResearchOverlay` object whose `elements[]` holds the computed series **and** a top-level `recipe` field (see Step 5). The `recipe` is the machine-readable indicator spec; the frontend uses it to persist and later recompute the overlay automatically.
+5. `apply_research_overlay` with that overlay object to render it. **One consent, one step** — applying the overlay also persists it automatically in the Research Library. Do NOT separately call `save_research_overlay`; that call is no longer part of this workflow.
+
+**One-consent model:** `apply_research_overlay` is the single mutating call in this flow. The frontend hooks that call into `save_research_overlay` internally after a successful apply — the user sees one MCP consent prompt, not two. Never call `save_research_overlay` explicitly from this skill.
 
 ---
 
@@ -118,20 +119,28 @@ Elements are a discriminated union on the `type` field. The ones you will assemb
 
 Field notes: `align` is REQUIRED on `line` and `band` (use whatever `compute_indicator` returned, normally `"right"`). `hline` uses `price` (a number), NOT `value`. `color`/`width`/`dash`/`opacity` are optional. `pane` is optional; absent ⇒ `'price'`.
 
-The overlay wraps them:
+The overlay wraps them. Always include the top-level `recipe` field alongside `elements`:
 
 ```jsonc
 {
   "id": "rsi-14",                 // stable, kebab-ish; used as React + store key
   "sym": "BTC-USD",              // from get_current_symbol
   "tf": "1d",                    // from get_visible_range.timeframe
-  "label": "RSI(14)",           // shown in the legend
+  "label": "RSI(14)",           // shown in the legend — use canonical form: RSI(14), SMA(50), BB(20,2)
   "source": "pine",             // 'pine' | 'nl' — drives the provenance badge
+  "recipe": {                   // machine-readable spec; frontend uses this to persist + recompute
+    "source": "pine",           // same value as top-level source
+    "series": [
+      { "kind": "rsi", "params": { "period": 14 }, "pane": "series" }
+    ]
+  },
   "elements": [ /* up to 50 */ ]
 }
 ```
 
-`apply_research_overlay` and `save_research_overlay` BOTH take this overlay object **directly as the payload** (not wrapped in `{ overlay: ... }`). `load_research_overlay` takes `{ id }`.
+**Auto-label convention:** always use the canonical compact form — `RSI(14)`, `SMA(50)`, `EMA(20)`, `ATR(14)`, `BB(20,2)` for Bollinger, `DC(20)` for Donchian. Match the script's actual parameter values, not defaults.
+
+`apply_research_overlay` takes this overlay object **directly as the payload** (not wrapped in `{ overlay: ... }`). `load_research_overlay` takes `{ id }`. Do NOT call `save_research_overlay` — persist-on-apply is automatic.
 
 ---
 
@@ -161,11 +170,13 @@ Other Pine constructs that are out of scope: `plotshape()`, `plotchar()`, `bgcol
 
 ## Step 8 — Consent-denied recovery (`-32006`)
 
-`apply_research_overlay` and `save_research_overlay` are mutations and may prompt the user for consent (unless `mcp.autoApprove = always`). If either returns MCP error code **`-32006`** (user denied consent, or the 60-second prompt timed out):
+`apply_research_overlay` is a mutation and may prompt the user for consent (unless `mcp.autoApprove = always`). If it returns MCP error code **`-32006`** (user denied consent, or the 60-second prompt timed out):
 
 - Explain in plain language: the overlay was NOT applied because consent was declined.
-- Offer to retry, or to save-it-for-later, or to adjust the `mcp.autoApprove` setting.
+- Offer to retry, or to adjust the `mcp.autoApprove` setting.
 - NEVER auto-retry and NEVER hang waiting. Stop and hand control back to the user.
+
+Note: `save_research_overlay` is NOT called by this skill — persist-on-apply is handled automatically by the frontend after a successful `apply_research_overlay`. There is only one consent prompt per indicator application.
 
 ---
 
@@ -193,6 +204,12 @@ Detect Pine (`indicator(`, `ta.`, `input(`, `plot(`, `hline(`). `overlay=false` 
 ```jsonc
 {
   "id": "rsi-14", "sym": "BTC-USD", "tf": "1d", "label": "RSI(14)", "source": "pine",
+  "recipe": {
+    "source": "pine",
+    "series": [
+      { "kind": "rsi", "params": { "period": 14 }, "pane": "series", "color": "#a855f7", "width": 2 }
+    ]
+  },
   "elements": [
     { "type": "line", "values": [/* … */], "align": "right", "color": "#a855f7", "width": 2, "pane": "series" },
     { "type": "hline", "price": 70, "label": "Overbought", "pane": "series", "dash": "4 4" },
@@ -201,7 +218,7 @@ Detect Pine (`indicator(`, `ta.`, `input(`, `plot(`, `hline(`). `overlay=false` 
 }
 ```
 
-Note the `hline`s share `pane: 'series'` so the guides sit in the RSI sub-pane, not on price. Then offer to save it.
+Note the `hline`s share `pane: 'series'` so the guides sit in the RSI sub-pane, not on price. The `recipe` captures the spec for automatic persist-on-apply — no separate save call needed.
 
 ### B. NL "add a 50-day moving average" → SMA price overlay
 
@@ -214,6 +231,12 @@ Detect NL. SMA is a price-scale study ⇒ price pane (omit `pane`). Steps:
 ```jsonc
 {
   "id": "sma-50", "sym": "ETH-USD", "tf": "1d", "label": "SMA(50)", "source": "nl",
+  "recipe": {
+    "source": "nl",
+    "series": [
+      { "kind": "sma", "params": { "period": 50 }, "color": "#e6b450", "width": 2 }
+    ]
+  },
   "elements": [
     { "type": "line", "values": [/* … */], "align": "right", "color": "#e6b450", "width": 2 }
   ]
@@ -240,12 +263,18 @@ plot(basis - dev, color=color.blue)
 The three `plot()` calls (basis, basis+dev, basis−dev) collapse into ONE `band` element (upper+lower) plus one `line` element (the middle). `overlay=true` ⇒ price pane. Steps:
 
 1. `get_current_symbol` + `get_visible_range`.
-2. Three computes: `kind: "bollinger_upper"`, `kind: "bollinger_lower"`, `kind: "bollinger_middle"`, each with `params: { period: 20 }` (carry the `mult` if the engine accepts a `mult`/`stddev` param; otherwise pass `period` only).
+2. Three computes: `kind: "bollinger_upper"`, `kind: "bollinger_lower"`, `kind: "bollinger_middle"`, each with `params: { period: 20, k: 2 }` (the multiplier key is **`k`**, not `mult` — e.g. `params: { period: 20, k: 2 }`; defaults to k=2 if omitted).
 3. `apply_research_overlay`:
 
 ```jsonc
 {
-  "id": "bb-20", "sym": "BTC-USD", "tf": "1d", "label": "Bollinger(20, 2)", "source": "pine",
+  "id": "bb-20", "sym": "BTC-USD", "tf": "1d", "label": "BB(20,2)", "source": "pine",
+  "recipe": {
+    "source": "pine",
+    "series": [
+      { "kind": "bollinger", "params": { "period": 20, "k": 2 }, "color": "#5b8def" }
+    ]
+  },
   "elements": [
     { "type": "band", "upper": [/* bollinger_upper */], "lower": [/* bollinger_lower */],
       "align": "right", "color": "#5b8def", "opacity": 0.15 },
@@ -254,7 +283,7 @@ The three `plot()` calls (basis, basis+dev, basis−dev) collapse into ONE `band
 }
 ```
 
-One band, one middle line — do NOT emit three separate lines.
+One band, one middle line — do NOT emit three separate lines. The `recipe.series` uses the `'bollinger'` logical alias (not three separate `bollinger_upper/middle/lower` entries) since the frontend recompute helper handles the fan-out.
 
 ### D. Partial conversion (convertible + unconvertible mixed)
 
@@ -269,7 +298,7 @@ src = request.security(syminfo.tickerid, "D", close)
 
 Detect Pine. Convert the `ta.sma(close, 20)` → one `line` element on price. The `plotshape()` and `request.security()` are out of scope. Steps:
 
-1. compute SMA(20); `apply_research_overlay` with the single line, `source: 'pine'`.
+1. compute SMA(20); `apply_research_overlay` with the single line, `source: 'pine'`, and a `recipe` with `{ kind: 'sma', params: { period: 20 } }`.
 2. Tell the user plainly:
 
 > "I plotted your SMA(20). I couldn't convert the `plotshape()` crossover arrows or the `request.security()` higher-timeframe pull — those aren't expressible as a chart overlay here. The SMA is a static snapshot of the most recent 500 bars and won't tick-update."

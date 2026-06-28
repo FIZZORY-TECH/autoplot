@@ -100,6 +100,7 @@ import { PortfolioPanel } from './panels/PortfolioPanel';
 import { ResearchLibrary } from './panels/ResearchLibrary';
 import { useResearchOverlayLibraryStore } from './stores/useResearchOverlayLibraryStore';
 import { CHART_RESERVE_TOP, CHART_RESERVE_BOTTOM } from './lib/layout';
+import { useBarsStore } from './stores/useBarsStore';
 
 const HISTORY_BARS = 600;
 const VISIBLE_BARS = 200;
@@ -214,6 +215,11 @@ export default function AppShell() {
     window.addEventListener('resize', recompute);
     return () => window.removeEventListener('resize', recompute);
   }, []);
+  // Mirror visible bars into the shared store so sibling panels (e.g. the
+  // Indicators drawer) can read them without prop-drilling. Every setBars
+  // callsite eventually mutates `bars`, so a single [bars]-dep effect is
+  // the complete and lowest-risk seam — no individual callsite edits needed.
+  useEffect(() => { useBarsStore.getState().setBars(bars); }, [bars]);
   useEffect(() => {
     let prev = getEquityCredStatus();
     return subscribeEquityCredStatus((next) => {
@@ -682,6 +688,39 @@ export default function AppShell() {
       getState: () => useChartMutationStore.getState().researchOverlays,
     };
     (window as unknown as Record<string, unknown>).__researchOverlayTest = hook;
+  }, []);
+
+  // Step 8 (saved-indicators) — DEV-only Playwright hook for the saved-indicator
+  // library mirror. Seeds rows directly into useResearchOverlayLibraryStore
+  // (in-memory only; no SQLite/Tauri write) so the IndicatorPanel "Saved
+  // indicators" section can be exercised without a CLI round-trip, and exposes
+  // a peek at the chart-mutation store so the spec can assert that Apply
+  // recomputed + applied an overlay. Stripped in production bundles.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const hook = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      seed: (overlays: any[]) =>
+        useResearchOverlayLibraryStore.setState({ overlays, hydrated: true }),
+      clear: () => useResearchOverlayLibraryStore.setState({ overlays: [] }),
+      getOverlays: () => useResearchOverlayLibraryStore.getState().overlays,
+      /** The applied research overlays on the chart (post-recompute). */
+      getApplied: () => useChartMutationStore.getState().researchOverlays,
+      /** Establish a deterministic active (sym, tf) so the panel's Apply gate
+       *  (disabled when store.activeSym is undefined) is satisfied, and to
+       *  simulate the user switching symbols. provider/quote come from the
+       *  curated catalog when known. */
+      setActive: (sym: string, tf: '1h' | '4h' | '1d' | '1w') => {
+        const a = ASSETS.find((x) => x.sym.toLowerCase() === sym.toLowerCase());
+        useAppStore.getState().setActiveAsset(
+          a
+            ? { sym: a.sym, provider: a.provider, quote: a.quote }
+            : { sym, provider: 'binance', quote: 'USDT' },
+        );
+        useAppStore.getState().setTf(tf);
+      },
+    };
+    (window as unknown as Record<string, unknown>).__savedIndicatorsTest = hook;
   }, []);
 
   // S10 — DEV-only Playwright test hooks for event-hotspot e2e guards.

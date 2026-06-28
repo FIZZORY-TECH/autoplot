@@ -314,6 +314,40 @@ export const Element = z.discriminatedUnion('type', [
 ]);
 export type Element = z.infer<typeof Element>;
 
+// ---------------------------------------------------------------------------
+// RecipeSpec / SeriesSpec — produced by the Pine-Script → indicator skill.
+//
+// `SeriesSpec.kind` reuses the pinned `Indicator` enum and extends it with two
+// logical aliases (`'bollinger'`, `'donchian'`) that the skill emits when it
+// detects a full Bollinger or Donchian channel rather than individual bands.
+// The aliases are NOT added to the main `Indicator` enum (which is frozen per
+// the comment above) — they live only inside the recipe sub-schema.
+// ---------------------------------------------------------------------------
+
+/** One series entry inside a `RecipeSpec`. */
+export const SeriesSpec = z.object({
+  /** Indicator kind — pinned `Indicator` values plus the two logical aliases. */
+  kind: z.union([Indicator, z.enum(['bollinger', 'donchian'])]),
+  /** Numeric parameter bag (period, k, multiplier, etc.). */
+  params: z.record(z.string(), z.number()).optional(),
+  /** Pane placement. Absent ⇒ renderer default (price axis for overlays). */
+  pane: z.enum(['price', 'series']).optional(),
+  /** Override color for this series. */
+  color: z.string().optional(),
+  /** Line width override. */
+  width: z.number().optional(),
+});
+export type SeriesSpec = z.infer<typeof SeriesSpec>;
+
+/** Indicator recipe embedded in a `ResearchOverlay` by the Pine-Script skill. */
+export const RecipeSpec = z.object({
+  /** Origin of the recipe — same domain as `ResearchOverlay.source`. */
+  source: z.enum(['pine', 'nl']),
+  /** Ordered list of series to compute and render. */
+  series: z.array(SeriesSpec),
+});
+export type RecipeSpec = z.infer<typeof RecipeSpec>;
+
 export const ResearchOverlay = z.object({
   /** Stable identifier used as React key + store key. */
   id: z.string().min(1),
@@ -328,6 +362,9 @@ export const ResearchOverlay = z.object({
   /** Backward-compatible: absent ⇒ no legend badge. `'pine'` = PineScript-derived
    *  overlay; `'nl'` = natural-language-derived overlay. */
   source: z.enum(['pine', 'nl']).optional(),
+  /** Optional indicator recipe produced by the Pine-Script → indicator skill.
+   *  Absent on pre-existing overlays — backward-compatible, additive only. */
+  recipe: RecipeSpec.optional(),
   /** Heterogeneous element list — max 50. */
   elements: z.array(Element).max(50),
 });
