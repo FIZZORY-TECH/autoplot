@@ -3,8 +3,8 @@
  *
  * Covers:
  *   1. Left rail renders no buttons (left rail is no longer used; all drawers moved to right).
- *   2. Right rail renders the correct ordered icons (watchlist, terminal, portfolio,
- *      indicator/Overlays, settings).
+ *   2. Right rail renders the correct ordered icons (watchlist, research, terminal,
+ *      portfolio, indicator/Overlays, settings — Sessions folded into Terminal).
  *   3. Clicking an icon calls useDockStore.toggle (open-state flips).
  *   4. aria-pressed reflects the open drawer for the rail's side.
  *   5. ArrowDown moves roving focus to the next button.
@@ -30,7 +30,7 @@ describe('ActivityBar', () => {
     expect(buttons).toHaveLength(0);
   });
 
-  it('2. right rail renders watchlist, research library, terminal, portfolio, Indicators, settings in order', () => {
+  it('2. right rail renders watchlist, research library, terminal, portfolio, Indicators, settings in order (no Sessions — folded into Terminal)', () => {
     render(<ActivityBar side="right" />);
     const bar = screen.getByRole('toolbar', { name: /right dock/i });
     const labels = within(bar)

@@ -90,11 +90,39 @@ pub struct TerminalState {
 ///
 /// Appends `--permission-mode bypassPermissions` after the isolation flags so
 /// the interactive PTY session defaults to bypassPermissions.
-pub(crate) fn build_argv(cli_path: &str, claude_home: &Path) -> Vec<String> {
+///
+/// Session id / resume (Branch A — `claude` v2 supports `--session-id <uuid>`
+/// and `--resume <value>`):
+///   - `resume == true` with a `session_id` → append `--resume <id>` (the long
+///     form; value required) so the CLI re-attaches to that prior conversation.
+///   - otherwise, when a `session_id` is supplied → append `--session-id <id>`
+///     so the CLI adopts the app-chosen UUID as its own session id (making the
+///     PTY map key equal the CLI session id).
+///   - when `session_id` is `None` → append nothing (backward compatible: the
+///     CLI mints its own id and the PTY uses a random `Uuid::new_v4()` key).
+pub(crate) fn build_argv(
+    cli_path: &str,
+    claude_home: &Path,
+    session_id: Option<&str>,
+    resume: bool,
+) -> Vec<String> {
     let mut argv: Vec<String> = vec![cli_path.to_string()];
     argv.extend(crate::profile::isolation_flags(claude_home));
     argv.push("--permission-mode".into());
     argv.push("bypassPermissions".into());
+
+    // Branch A session flags — appended last so they don't disturb the
+    // isolation / permission-mode flags above.
+    if let Some(id) = session_id {
+        if resume {
+            argv.push("--resume".into());
+            argv.push(id.to_string());
+        } else {
+            argv.push("--session-id".into());
+            argv.push(id.to_string());
+        }
+    }
+
     argv
 }
 
@@ -138,6 +166,17 @@ pub struct TerminalSpawnArgs {
     pub rows: u16,
     /// Working directory for the spawned process. `None` → claude-home.
     pub cwd: Option<String>,
+    /// Caller-supplied session id (an RFC-4122 UUID). When `Some`, it is used
+    /// BOTH as the PTY map key / returned id AND passed to the CLI via
+    /// `--session-id <id>` (new) or `--resume <id>` (resume) so the app's PTY
+    /// session id equals the CLI's own session id. When `None`, a random
+    /// `Uuid::new_v4()` is generated and no session flag is emitted
+    /// (backward compatible with existing callers).
+    pub session_id: Option<String>,
+    /// When `Some(true)`, resume the prior CLI conversation for `session_id`
+    /// (emits `--resume <id>`). Falsy / absent → start a new session (emits
+    /// `--session-id <id>` when `session_id` is provided).
+    pub resume: Option<bool>,
 }
 
 /// Result returned by `terminal_spawn`.
@@ -185,9 +224,30 @@ pub async fn terminal_spawn(
     let claude_home = crate::profile::app_claude_home().map_err(|e| e.to_string())?;
 
     // ------------------------------------------------------------------
+    // Resolve the session id up-front so it can flow into both the CLI argv
+    // (Branch A `--session-id` / `--resume`) and the PTY map key. When the
+    // caller supplies one, the PTY session id EQUALS the CLI session id; when
+    // absent we mint a random UUID and emit no session flag (backward compat).
+    // ------------------------------------------------------------------
+    let resume = args.resume.unwrap_or(false);
+    let session_id = args
+        .session_id
+        .clone()
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
+    // Only forward a session flag to the CLI when the caller explicitly
+    // supplied an id; a randomly minted id is the PTY key only, not a CLI flag
+    // (preserves today's no-flag behavior for existing callers).
+    let cli_session_id: Option<&str> = args.session_id.as_deref();
+
+    // ------------------------------------------------------------------
     // Build argv (no --print, no --input-format stream-json, no --verbose)
     // ------------------------------------------------------------------
-    let argv = build_argv(&cli_path.to_string_lossy(), &claude_home);
+    let argv = build_argv(
+        &cli_path.to_string_lossy(),
+        &claude_home,
+        cli_session_id,
+        resume,
+    );
 
     // ------------------------------------------------------------------
     // Build CommandBuilder
@@ -251,10 +311,9 @@ pub async fn terminal_spawn(
         .map_err(|e| format!("try_clone_reader: {e}"))?;
 
     // ------------------------------------------------------------------
-    // Build session, register in state
+    // Build session, register in state. `session_id` was resolved above
+    // (caller-supplied id reused as the map key, else a random UUID).
     // ------------------------------------------------------------------
-    let session_id = Uuid::new_v4().to_string();
-
     let session = Arc::new(TerminalSession {
         master: SyncMutex::new(pair.master),
         writer: SyncMutex::new(writer),
@@ -481,7 +540,7 @@ mod tests {
     #[test]
     fn argv_excludes_print_and_stream_json() {
         let home = PathBuf::from("/tmp/test-claude-home");
-        let argv = build_argv("/usr/local/bin/claude", &home);
+        let argv = build_argv("/usr/local/bin/claude", &home, None, false);
 
         let forbidden = ["--print", "--input-format", "--verbose"];
         for flag in forbidden {
@@ -499,7 +558,7 @@ mod tests {
     #[test]
     fn argv_includes_isolation_flags() {
         let home = PathBuf::from("/tmp/test-claude-home");
-        let argv = build_argv("/usr/local/bin/claude", &home);
+        let argv = build_argv("/usr/local/bin/claude", &home, None, false);
 
         // All three constant flags must appear.
         for flag in crate::profile::ISOLATION_CONSTANT_FLAGS {
@@ -527,6 +586,74 @@ mod tests {
             argv.get(n - 2).map(String::as_str),
             Some("--permission-mode"),
             "argv must contain '--permission-mode' before 'bypassPermissions'"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Test: Branch A session flags — new session emits `--session-id <id>`,
+    // resume emits `--resume <id>`, and an omitted id yields the prior argv.
+    // -----------------------------------------------------------------------
+
+    // Find the value immediately following `flag` in argv, if present.
+    fn flag_value<'a>(argv: &'a [String], flag: &str) -> Option<&'a str> {
+        argv.iter()
+            .position(|a| a == flag)
+            .and_then(|i| argv.get(i + 1))
+            .map(String::as_str)
+    }
+
+    #[test]
+    fn argv_new_session_emits_session_id_flag() {
+        let home = PathBuf::from("/tmp/test-claude-home");
+        let id = "11111111-2222-3333-4444-555555555555";
+        let argv = build_argv("/usr/local/bin/claude", &home, Some(id), false);
+
+        assert_eq!(
+            flag_value(&argv, "--session-id"),
+            Some(id),
+            "a new spawn with a session id must emit `--session-id <id>` — got: {argv:?}"
+        );
+        // Must NOT emit --resume for a new session.
+        assert!(
+            !argv.iter().any(|a| a == "--resume"),
+            "new session must NOT emit --resume — got: {argv:?}"
+        );
+    }
+
+    #[test]
+    fn argv_resume_emits_resume_flag() {
+        let home = PathBuf::from("/tmp/test-claude-home");
+        let id = "11111111-2222-3333-4444-555555555555";
+        let argv = build_argv("/usr/local/bin/claude", &home, Some(id), true);
+
+        assert_eq!(
+            flag_value(&argv, "--resume"),
+            Some(id),
+            "a resume spawn must emit `--resume <id>` (long form, value required) — got: {argv:?}"
+        );
+        // Must NOT emit --session-id when resuming.
+        assert!(
+            !argv.iter().any(|a| a == "--session-id"),
+            "resume must NOT emit --session-id — got: {argv:?}"
+        );
+    }
+
+    #[test]
+    fn argv_no_session_id_matches_prior_argv() {
+        let home = PathBuf::from("/tmp/test-claude-home");
+        // Backward compatible: with no session id and no resume, argv must be
+        // identical to the prior 2-arg behavior — no --session-id / --resume.
+        let argv = build_argv("/usr/local/bin/claude", &home, None, false);
+
+        assert!(
+            !argv.iter().any(|a| a == "--session-id" || a == "--resume"),
+            "an omitted session id must yield the prior argv (no session flags) — got: {argv:?}"
+        );
+        // And resume=true with no id is still a no-op (nothing to resume).
+        let argv_resume_no_id = build_argv("/usr/local/bin/claude", &home, None, true);
+        assert_eq!(
+            argv, argv_resume_no_id,
+            "resume=true with no session id must not change argv — got: {argv_resume_no_id:?}"
         );
     }
 

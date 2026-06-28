@@ -30,6 +30,7 @@
 import React, { useRef, useState } from 'react';
 import { useDockStore } from '../stores/useDockStore';
 import type { DrawerId, DockSide } from '../stores/useDockStore';
+import { useAiSessionStore } from '../stores/useAiSessionStore';
 import { RESERVE_TOP, RESERVE_BOTTOM } from '../lib/layout';
 
 // Rail tier: at/above the drawer tier (DockDrawer DRAWER_Z=34) so the rail stays
@@ -166,6 +167,16 @@ export function ActivityBar({ side }: ActivityBarProps): JSX.Element {
   // Open drawer for THIS side — drives `aria-pressed` / `.active`.
   const openId = useDockStore((s) => (side === 'left' ? s.openLeft : s.openRight));
 
+  // Busy activity badge on the Terminal rail button (sessions now live inside
+  // the Terminal). Use a scalar boolean selector so Zustand only re-renders this
+  // component when the boolean flips — not on every markActivity call.
+  // The 700ms timer that removes a busyUntil entry is a state change and triggers
+  // a fresh selector evaluation, so the badge clears correctly.
+  const anyBusy = useAiSessionStore((s) =>
+    Object.values(s.busyUntil).some((u) => Date.now() < u),
+  );
+  const terminalClosed = useDockStore((s) => s.openRight !== 'terminal');
+
   // Roving tabindex — index of the currently-tabbable button. Defaults to the
   // first; moves with the focus so Tab always lands on the last-focused button.
   const [rovingIdx, setRovingIdx] = useState(0);
@@ -232,6 +243,11 @@ export function ActivityBar({ side }: ActivityBarProps): JSX.Element {
         const open = openId === id;
         const { label, kbd } = META[id];
         const Icon = ICONS[id];
+        // Busy badge: only on the Terminal button, only when a session is busy
+        // and the Terminal drawer is closed. A subtle 3px accent dot reusing the
+        // `.dock-btn.active::after` structural precedent; slow breathe, static
+        // under reduced-motion (see motion.css). No glow.
+        const showBadge = id === 'terminal' && anyBusy && terminalClosed;
         return (
           <button
             key={id}
@@ -240,7 +256,7 @@ export function ActivityBar({ side }: ActivityBarProps): JSX.Element {
               btnRefs.current[idx] = el;
             }}
             className={`dock-btn${open ? ' active' : ''}`}
-            aria-label={label}
+            aria-label={showBadge ? `${label} (a session is working)` : label}
             aria-pressed={open}
             title={kbd ? `${label} (${kbd})` : label}
             tabIndex={idx === rovingIdx ? 0 : -1}
@@ -249,6 +265,9 @@ export function ActivityBar({ side }: ActivityBarProps): JSX.Element {
             onClick={() => useDockStore.getState().toggle(id)}
           >
             <Icon />
+            {showBadge && (
+              <span className="session-badge" data-testid="terminal-busy-badge" aria-hidden="true" />
+            )}
             <span className="glabel glabel--rail">
               {label}
               {kbd ? `  ${kbd}` : ''}

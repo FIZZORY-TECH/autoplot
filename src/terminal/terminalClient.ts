@@ -28,6 +28,18 @@ export interface OpenTerminalOptions {
   rows: number;
   cwd?: string;
   cliPath?: string;
+  /**
+   * Caller-supplied RFC-4122 UUID (generate with `crypto.randomUUID()`). When
+   * provided, the backend uses it BOTH as the PTY key / returned id AND passes
+   * it to the CLI (`--session-id` for a fresh spawn, `--resume` when
+   * `resume:true`). Omit to let the backend mint a random UUID (legacy path).
+   */
+  sessionId?: string;
+  /**
+   * Resume the prior CLI conversation for `sessionId` (emits `--resume <id>`).
+   * Requires `sessionId`. Falsy/absent → fresh session.
+   */
+  resume?: boolean;
 }
 
 export interface TerminalDataEvent {
@@ -159,6 +171,8 @@ export async function openTerminal(
         rows: opts.rows,
         cwd: opts.cwd ?? null,
         cli_path: opts.cliPath ?? null,
+        session_id: opts.sessionId ?? null,
+        resume: opts.resume ?? false,
       },
     });
   } catch (err) {
@@ -201,7 +215,7 @@ export async function openTerminal(
       // kill() signals the child; the exit event fires after the child dies
       // and gets delivered to subscribers before teardown. We do NOT call
       // teardown here — that happens automatically in the exit handler.
-      await invoke<void>('terminal_kill', { sessionId: resolvedSessionId });
+      await invoke<void>('terminal_kill', { session_id: resolvedSessionId });
     },
 
     on(
@@ -223,7 +237,7 @@ export async function openTerminal(
       if (disposed) return; // idempotent
       // Call terminal_kill (Rust side is idempotent — safe even after exit).
       try {
-        await invoke<void>('terminal_kill', { sessionId: resolvedSessionId });
+        await invoke<void>('terminal_kill', { session_id: resolvedSessionId });
       } catch (_) {
         // best-effort
       }

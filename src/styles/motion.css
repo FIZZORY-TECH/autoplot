@@ -28,6 +28,46 @@
   to { transform: rotate(360deg); }
 }
 
+/* =============================================================
+   AI Session working-state motion (SessionsPanel.tsx + the rail
+   busy badge in ActivityBar.tsx). HARD CONSTRAINT: every keyframe
+   here animates ONLY transform + opacity — no box-shadow blur, no
+   filter, no width/height, no glow/neon (neon retired app-wide).
+   Looping keyframes (breathe, stream-dot) are suppressed under
+   prefers-reduced-motion below (static dots); the one-shot fades
+   (dot-fade-up / dot-fade-down) ride the global 1ms cap.
+   ============================================================= */
+
+/* RUNNING-quiet — the session dot gently breathes (opacity + a
+   tiny scale). Slow (~1.8–2.4s) so it reads as "alive, idle". Also
+   reused by the rail busy badge as a slower pulse. */
+@keyframes session-breathe {
+  0%   { opacity: 0.45; transform: scale(0.82); }
+  50%  { opacity: 1;    transform: scale(1); }
+  100% { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* RUNNING-busy — one dot of the 3-dot streaming micro-indicator.
+   Each of the three dots runs this with a staggered delay so the
+   row reads as a typing/streaming pulse. opacity + scale only. */
+@keyframes session-stream-dot {
+  0%   { opacity: 0.3; transform: scale(0.7); }
+  40%  { opacity: 1;   transform: scale(1); }
+  100% { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* Spawn/New — the dot fades up from muted→accent as a row enters. */
+@keyframes dot-fade-up {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Exit/self-exit — the dot fades down accent→muted as it goes idle. */
+@keyframes dot-fade-down {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0.55; transform: scale(0.85); }
+}
+
 /* Crosshair readout — small slide-down + fade-in for the OHLCV
    floating glass card and the Headline OHLCV strip when the
    crosshair is active. Drive with:
@@ -117,6 +157,23 @@
   border-radius: 50%;
   background: var(--accent);
   opacity: 0.85;
+}
+
+/* Busy activity badge — a 3px accent dot pinned to the top-right of the
+   Terminal rail orb (so it never collides with the bottom-center active dot).
+   Mirrors the `.dock-btn.active::after` structural precedent but is a real
+   element (the active state already owns ::after). Slow `session-breathe`
+   pulse; STATIC under reduced-motion (see the reduced-motion block). No glow —
+   transform/opacity only. */
+.dock-btn .session-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+  animation: session-breathe 2.4s var(--ease) infinite;
 }
 /* Active + hover: accent color stays, scale lift + tint. */
 .dock-btn.active:hover {
@@ -479,6 +536,18 @@
      reduced-motion. */
   .tick-flash,
   .delta-pill[data-flipped="true"] { animation: none !important; }
+
+  /* AI session dots — the looping breathe + 3-dot stream are ambient,
+     so they become STATIC dots: hard-disable the loop and pin the dot
+     to its rest transform/opacity. The one-shot fade-up / fade-down
+     ride the global 1ms cap (instant), per the working-state table. */
+  .session-dot--running,
+  .session-stream-dot,
+  .dock-btn .session-badge {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
 
   /* DockDrawer — cap the slide/scale spring to ~1ms so the drawer appears
      and disappears instantly. The mountOnOpen unmount still fires because

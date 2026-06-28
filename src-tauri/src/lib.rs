@@ -21,7 +21,7 @@ use commands::db::{
     db_datasets_list, db_datasets_upsert, db_datasets_delete,
     db_research_overlays_list, db_research_overlays_upsert, db_research_overlays_delete,
     db_strategies_list, db_strategies_upsert, db_strategies_delete,
-    db_ai_sessions_list, db_ai_sessions_get, db_ai_sessions_delete,
+    db_ai_sessions_list, db_ai_sessions_get, db_ai_sessions_delete, db_ai_sessions_upsert,
     db_ai_strategy_get, db_ai_strategy_update_body,
     db_portfolio_list, db_portfolio_upsert, db_portfolio_add_lot,
     db_portfolio_reduce, db_portfolio_remove,
@@ -233,6 +233,7 @@ pub fn run() {
             db_ai_sessions_list,
             db_ai_sessions_get,
             db_ai_sessions_delete,
+            db_ai_sessions_upsert,
             db_ai_strategy_get,
             db_ai_strategy_update_body,
             market_fetch_history,
@@ -280,6 +281,32 @@ pub fn run() {
             db_portfolio_reduce,
             db_portfolio_remove,
         ])
+        // App-shutdown PTY cleanup — guarantee a hard quit (Cmd-Q / window
+        // close) never orphans a `claude` child process. On CloseRequested or
+        // Destroyed we iterate the managed TerminalState.sessions map and kill
+        // every live PTY, mirroring the kill in `terminal_kill`.
+        //
+        // CRITICAL async-mutex subtlety: this closure is SYNCHRONOUS — we
+        // cannot `.await`. `TerminalState.sessions` is a tokio `AsyncMutex`, so
+        // we acquire it with `blocking_lock()` (NOT `.lock().await`). Each
+        // `TerminalSession.killer` is a `std::sync::Mutex`, so it uses the sync
+        // `.lock().unwrap()` exactly as `terminal_kill` does. This adds ZERO new
+        // IPC commands — it is purely an event handler.
+        .on_window_event(|window, event| {
+            if matches!(
+                event,
+                tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+            ) {
+                let state = window.app_handle().state::<TerminalState>();
+                // tokio Mutex: blocking_lock() is the correct sync access from
+                // a non-async context (never `.lock().await` here).
+                let sessions = state.sessions.blocking_lock();
+                for session in sessions.values() {
+                    // Best-effort kill — same call shape as terminal_kill.
+                    session.killer.lock().unwrap().kill().ok();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

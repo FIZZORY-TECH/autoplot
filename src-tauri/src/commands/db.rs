@@ -817,6 +817,7 @@ pub struct AiSessionRow {
     pub created_at: i64,
     pub last_used_at: i64,
     pub summary: Option<String>,
+    pub title: Option<String>,
 }
 
 #[tauri::command]
@@ -861,12 +862,13 @@ pub(crate) fn ai_sessions_list(
             created_at: row.get(4)?,
             last_used_at: row.get(5)?,
             summary: row.get(6)?,
+            title: row.get(7)?,
         })
     };
     match mode {
         Some(m) => {
             let mut stmt = conn.prepare(
-                "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary
+                "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary, title
                  FROM ai_sessions WHERE mode = ?1 ORDER BY last_used_at DESC",
             )?;
             let rows = stmt
@@ -876,7 +878,7 @@ pub(crate) fn ai_sessions_list(
         }
         None => {
             let mut stmt = conn.prepare(
-                "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary
+                "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary, title
                  FROM ai_sessions ORDER BY last_used_at DESC",
             )?;
             let rows = stmt
@@ -892,7 +894,7 @@ pub(crate) fn ai_sessions_get(
     id: &str,
 ) -> rusqlite::Result<Option<AiSessionRow>> {
     let result = conn.query_row(
-        "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary
+        "SELECT id, mode, cwd_path, model, created_at, last_used_at, summary, title
          FROM ai_sessions WHERE id = ?1",
         params![id],
         |row| {
@@ -904,6 +906,7 @@ pub(crate) fn ai_sessions_get(
                 created_at: row.get(4)?,
                 last_used_at: row.get(5)?,
                 summary: row.get(6)?,
+                title: row.get(7)?,
             })
         },
     );
@@ -916,6 +919,31 @@ pub(crate) fn ai_sessions_get(
 
 pub(crate) fn ai_sessions_delete(conn: &Connection, id: &str) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM ai_sessions WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn db_ai_sessions_upsert(
+    row: AiSessionRow,
+    state: tauri::State<'_, DbState>,
+) -> Result<(), String> {
+    let conn = state.lock().map_err(|e| e.to_string())?;
+    ai_sessions_upsert(&conn, &row).map_err(|e| e.to_string())
+}
+
+pub(crate) fn ai_sessions_upsert(conn: &Connection, r: &AiSessionRow) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO ai_sessions (id, mode, cwd_path, model, created_at, last_used_at, summary, title)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+         ON CONFLICT(id) DO UPDATE SET
+             mode = excluded.mode,
+             cwd_path = excluded.cwd_path,
+             model = excluded.model,
+             last_used_at = excluded.last_used_at,
+             summary = excluded.summary,
+             title = excluded.title",
+        params![r.id, r.mode, r.cwd_path, r.model, r.created_at, r.last_used_at, r.summary, r.title],
+    )?;
     Ok(())
 }
 
@@ -2525,5 +2553,113 @@ mod tests {
         assert!((usdt.qty - 1.0).abs() < f64::EPSILON);
         assert!((usd.qty  - 2.0).abs() < f64::EPSILON);
         assert!((usdc.qty - 3.0).abs() < f64::EPSILON);
+    }
+
+    // -----------------------------------------------------------------------
+    // ai_sessions upsert round-trip
+    // -----------------------------------------------------------------------
+
+    fn make_ai_session(id: &str) -> AiSessionRow {
+        AiSessionRow {
+            id: id.to_string(),
+            mode: "research".to_string(),
+            cwd_path: "/tmp/test-cwd".to_string(),
+            model: None,
+            created_at: 1_700_000_000_000,
+            last_used_at: 1_700_000_000_000,
+            summary: None,
+            title: None,
+        }
+    }
+
+    #[test]
+    fn test_db_ai_sessions_upsert_roundtrip() {
+        let conn = fresh_db();
+
+        let mut row = make_ai_session("sess-upsert-001");
+
+        // --- Insert ---
+        ai_sessions_upsert(&conn, &row).expect("initial insert");
+
+        let fetched = ai_sessions_get(&conn, "sess-upsert-001")
+            .expect("get after insert")
+            .expect("row must exist");
+
+        assert_eq!(fetched.id, "sess-upsert-001");
+        assert_eq!(fetched.mode, "research");
+        assert_eq!(fetched.cwd_path, "/tmp/test-cwd");
+        assert!(fetched.title.is_none(), "title should be NULL after insert");
+        assert_eq!(
+            fetched.created_at, 1_700_000_000_000,
+            "created_at must match inserted value"
+        );
+
+        // --- Upsert-update: change title + last_used_at; created_at must be PRESERVED ---
+        row.title = Some("My Study Session".to_string());
+        row.last_used_at = 1_700_000_100_000; // 100s later
+
+        ai_sessions_upsert(&conn, &row).expect("upsert update");
+
+        let updated = ai_sessions_get(&conn, "sess-upsert-001")
+            .expect("get after upsert")
+            .expect("row must still exist after upsert");
+
+        assert_eq!(
+            updated.title.as_deref(),
+            Some("My Study Session"),
+            "title must persist after upsert"
+        );
+        assert_eq!(
+            updated.last_used_at, 1_700_000_100_000,
+            "last_used_at must be updated by upsert"
+        );
+        // created_at is NOT in the ON CONFLICT DO UPDATE SET clause — the DB
+        // preserves the original value.
+        assert_eq!(
+            updated.created_at, 1_700_000_000_000,
+            "created_at must be preserved on conflict (not overwritten)"
+        );
+
+        // Only one row must exist (no phantom duplicate).
+        let all = ai_sessions_list(&conn, None).expect("list");
+        assert_eq!(all.len(), 1, "upsert must NOT create a duplicate row");
+    }
+
+    #[test]
+    fn test_db_ai_sessions_list_filtered_by_mode() {
+        let conn = fresh_db();
+
+        let mut research_row = make_ai_session("sess-research-001");
+        research_row.mode = "research".to_string();
+        ai_sessions_upsert(&conn, &research_row).expect("insert research");
+
+        let mut strategy_row = make_ai_session("sess-strategy-001");
+        strategy_row.mode = "strategy".to_string();
+        ai_sessions_upsert(&conn, &strategy_row).expect("insert strategy");
+
+        let research_rows = ai_sessions_list(&conn, Some("research")).expect("list research");
+        let strategy_rows = ai_sessions_list(&conn, Some("strategy")).expect("list strategy");
+        let all_rows = ai_sessions_list(&conn, None).expect("list all");
+
+        assert_eq!(research_rows.len(), 1, "only one research row");
+        assert_eq!(strategy_rows.len(), 1, "only one strategy row");
+        assert_eq!(all_rows.len(), 2, "all rows = research + strategy");
+        assert_eq!(research_rows[0].id, "sess-research-001");
+        assert_eq!(strategy_rows[0].id, "sess-strategy-001");
+    }
+
+    #[test]
+    fn test_db_ai_sessions_delete() {
+        let conn = fresh_db();
+
+        let row = make_ai_session("sess-del-001");
+        ai_sessions_upsert(&conn, &row).expect("insert");
+        assert!(ai_sessions_get(&conn, "sess-del-001").unwrap().is_some());
+
+        ai_sessions_delete(&conn, "sess-del-001").expect("delete");
+        assert!(
+            ai_sessions_get(&conn, "sess-del-001").unwrap().is_none(),
+            "row must be absent after delete"
+        );
     }
 }

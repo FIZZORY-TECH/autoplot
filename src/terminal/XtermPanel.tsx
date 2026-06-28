@@ -162,7 +162,34 @@ export interface XtermPanelProps {
   cwd?: string;
   cliPath?: string;
   className?: string;
+  /**
+   * Caller-supplied RFC-4122 UUID for this PTY (multi-session host). Forwarded
+   * to `openTerminal` so the PTY key == CLI session id. Omit for the legacy
+   * single-session path (backend mints a random id).
+   */
+  sessionId?: string;
+  /** Resume the prior CLI conversation for `sessionId` (emits `--resume`). */
+  resume?: boolean;
+  /**
+   * Fired on EVERY PTY data frame, even for hidden/background mounts. The
+   * multi-session host wires this to `useAiSessionStore.markActivity(id)` so
+   * background sessions still flip busy. Carries the session id for routing.
+   */
+  onData?: (sessionId: string) => void;
   onExit?: (code: number) => void;
+  /**
+   * Fired once when `openTerminal` resolves (the PTY is live). The host uses
+   * this to commit the session row (`recordSpawn`) only on spawn success and to
+   * settle the in-flight spawn guard. `sessionId` is the resolved PTY id.
+   */
+  onSpawned?: (sessionId: string) => void;
+  /**
+   * Fired once when `openTerminal` rejects (e.g. the backend `MAX_SESSIONS`
+   * cap → message contains `max_sessions_reached`). The host rolls back any
+   * optimistic state and surfaces the cap to the caller. The in-panel toast
+   * still fires; the host decides whether to also unmount this xterm.
+   */
+  onSpawnError?: (sessionId: string | undefined, error: Error) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +197,19 @@ export interface XtermPanelProps {
 // ---------------------------------------------------------------------------
 
 export function XtermPanel(props: XtermPanelProps): JSX.Element {
-  const { cols = 80, rows = 24, cwd, cliPath, className, onExit } = props;
+  const {
+    cols = 80,
+    rows = 24,
+    cwd,
+    cliPath,
+    className,
+    sessionId,
+    resume,
+    onData,
+    onExit,
+    onSpawned,
+    onSpawnError,
+  } = props;
 
   // --- Browser-mode fallback (no xterm import) ---
   if (!isTauriRuntime()) {
@@ -217,7 +256,21 @@ export function XtermPanel(props: XtermPanelProps): JSX.Element {
   }
 
   // --- Tauri mode ---
-  return <TauriTerminal cols={cols} rows={rows} cwd={cwd} cliPath={cliPath} className={className} onExit={onExit} />;
+  return (
+    <TauriTerminal
+      cols={cols}
+      rows={rows}
+      cwd={cwd}
+      cliPath={cliPath}
+      className={className}
+      sessionId={sessionId}
+      resume={resume}
+      onData={onData}
+      onExit={onExit}
+      onSpawned={onSpawned}
+      onSpawnError={onSpawnError}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -321,12 +374,43 @@ interface TauriTerminalProps {
   cwd?: string;
   cliPath?: string;
   className?: string;
+  sessionId?: string;
+  resume?: boolean;
+  onData?: (sessionId: string) => void;
   onExit?: (code: number) => void;
+  onSpawned?: (sessionId: string) => void;
+  onSpawnError?: (sessionId: string | undefined, error: Error) => void;
 }
 
-function TauriTerminal({ cols, rows, cwd, cliPath, className, onExit }: TauriTerminalProps): JSX.Element {
+function TauriTerminal({
+  cols,
+  rows,
+  cwd,
+  cliPath,
+  className,
+  sessionId,
+  resume,
+  onData,
+  onExit,
+  onSpawned,
+  onSpawnError,
+}: TauriTerminalProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+
+  // The setup effect runs once on mount (deps: []), so capture the latest
+  // callbacks in refs. The host may pass fresh `onData` / `onExit` closures on
+  // every render (it reads store state); without refs the effect would call the
+  // stale mount-time closure. Refs let the live PTY handlers always reach the
+  // current callbacks without re-running setup (which would re-spawn the PTY).
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
+  const onExitRef = useRef(onExit);
+  onExitRef.current = onExit;
+  const onSpawnedRef = useRef(onSpawned);
+  onSpawnedRef.current = onSpawned;
+  const onSpawnErrorRef = useRef(onSpawnError);
+  onSpawnErrorRef.current = onSpawnError;
 
   // Session-start overlay lifecycle:
   //   overlayMounted — overlay is in the DOM (true from mount; false once the
@@ -423,6 +507,8 @@ function TauriTerminal({ cols, rows, cwd, cliPath, className, onExit }: TauriTer
           rows: initialRows,
           cwd,
           cliPath,
+          sessionId,
+          resume,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -445,15 +531,30 @@ function TauriTerminal({ cols, rows, cwd, cliPath, className, onExit }: TauriTer
             detail: msg,
           });
         }
+        // Tell the host the spawn failed so it can roll back the optimistic row
+        // / settle the in-flight guard / unmount this xterm. Fires even when the
+        // effect was cancelled (an unmount mid-spawn is itself a "no PTY" outcome).
+        onSpawnErrorRef.current?.(sessionId, err instanceof Error ? err : new Error(msg));
         term.dispose();
         return;
       }
 
       if (cancelled) {
+        // Unmounted mid-spawn: the PTY came up but we're tearing it right back
+        // down. Tell the host this mount aborted so the in-flight guard can
+        // never deadlock. The host settles the pending-spawn promise in a
+        // StrictMode-safe way (a deferred reject the immediate remount preempts)
+        // — see rejectSpawn's `aborted` path.
+        onSpawnErrorRef.current?.(handle.sessionId, new Error('spawn_aborted'));
         await handle.dispose();
         term.dispose();
         return;
       }
+
+      // PTY is live — let the host commit the session row (recordSpawn) and
+      // settle the in-flight guard. Use the resolved id (== sessionId when the
+      // host supplied one).
+      onSpawnedRef.current?.(handle.sessionId);
 
       // -----------------------------------------------------------------------
       // 4. Wire stdin — term → handle
@@ -467,6 +568,11 @@ function TauriTerminal({ cols, rows, cwd, cliPath, className, onExit }: TauriTer
       // -----------------------------------------------------------------------
       handle.on('data', (e) => {
         term.write(e.bytes);
+        // Notify host on EVERY frame (incl. while hidden/background) so the
+        // session store can flip busy for any session — not just the visible
+        // one. The listener stays live because the host keeps hidden xterms
+        // mounted (display:none), never unmounted.
+        onDataRef.current?.(e.sessionId);
         // First PTY data frame → dissolve the session-start overlay. Latch so
         // this fires once. Reduced-motion: hide instantly (no fade). Otherwise
         // flip data-dissolving (240ms CSS transition) then unmount on a timer.
@@ -487,7 +593,7 @@ function TauriTerminal({ cols, rows, cwd, cliPath, className, onExit }: TauriTer
       // 6. Wire exit
       // -----------------------------------------------------------------------
       handle.on('exit', (e) => {
-        onExit?.(e.code);
+        onExitRef.current?.(e.code);
         term.write('\r\n\x1b[2m[session ended]\x1b[0m\r\n');
       });
 

@@ -1680,6 +1680,10 @@ export default function AppShell() {
           actions re-paint via useChartMutationStore / useAppStore overlay id. */}
       <ResearchLibrary />
 
+      {/* Sessions are no longer a standalone drawer — session management folded
+          into the Terminal header tab strip (src/terminal/SessionTabs.tsx),
+          mounted by TerminalPanel. */}
+
     </main>
   );
 }
