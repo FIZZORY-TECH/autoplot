@@ -39,6 +39,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (17, include_str!("../migrations/0017_trends_add_quote.sql")),
     (18, include_str!("../migrations/0018_portfolio.sql")),
     (19, include_str!("../migrations/0019_research_overlays.sql")),
+    (20, include_str!("../migrations/0020_ai_sessions_title.sql")),
 ];
 
 // ---------------------------------------------------------------------------

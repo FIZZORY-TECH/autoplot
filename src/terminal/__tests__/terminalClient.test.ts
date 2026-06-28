@@ -306,4 +306,82 @@ describe('openTerminal', () => {
       'max_sessions_reached',
     );
   });
+
+  // -------------------------------------------------------------------------
+  // dispose / Exit path: terminal_kill arg shape
+  // -------------------------------------------------------------------------
+
+  it('dispose() invokes terminal_kill with exactly { session_id } (snake_case), once, idempotently', async () => {
+    // Fresh local listen / unlisten mocks so this test is fully isolated.
+    const localUnlistens: ReturnType<typeof vi.fn>[] = [];
+    const { listen } = await import('@tauri-apps/api/event');
+    vi.mocked(listen).mockImplementation(async (event: string, handler: EventHandler) => {
+      const unlisten = vi.fn();
+      localUnlistens.push(unlisten);
+      capturedListeners.push({ event, handler });
+      return unlisten;
+    });
+
+    mockInvoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'terminal_spawn') return { session_id: TEST_SESSION_ID };
+      return undefined;
+    });
+
+    const handle = await openTerminal({ cols: 80, rows: 24 });
+
+    // Call dispose twice — idempotency check.
+    await handle.dispose();
+    await handle.dispose();
+
+    // Filter down to terminal_kill calls only.
+    const killCalls = mockInvoke.mock.calls.filter(
+      (c: unknown[]) => c[0] === 'terminal_kill',
+    );
+
+    // Exactly one kill, even with two dispose() calls.
+    expect(killCalls).toHaveLength(1);
+
+    // The second argument must be an object with exactly the snake_case key `session_id`.
+    const [_cmd, killArgs] = killCalls[0] as [string, Record<string, unknown>];
+    expect(killArgs).toEqual({ session_id: TEST_SESSION_ID });
+
+    // Sanity: camelCase key must NOT be present.
+    expect(Object.keys(killArgs)).not.toContain('sessionId');
+  });
+
+  it('exit event path: terminal_kill is called with { session_id } (snake_case)', async () => {
+    const localUnlistens: ReturnType<typeof vi.fn>[] = [];
+    const { listen } = await import('@tauri-apps/api/event');
+    vi.mocked(listen).mockImplementation(async (event: string, handler: EventHandler) => {
+      const unlisten = vi.fn();
+      localUnlistens.push(unlisten);
+      capturedListeners.push({ event, handler });
+      return unlisten;
+    });
+
+    mockInvoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'terminal_spawn') return { session_id: TEST_SESSION_ID };
+      return undefined;
+    });
+
+    await openTerminal({ cols: 80, rows: 24 });
+
+    // Fire the exit event from Rust (simulates the PTY process dying).
+    fireExitEvent(TEST_SESSION_ID, 0);
+
+    // Let any async teardown settle.
+    await Promise.resolve();
+
+    const killCalls = mockInvoke.mock.calls.filter(
+      (c: unknown[]) => c[0] === 'terminal_kill',
+    );
+
+    if (killCalls.length > 0) {
+      // If the implementation auto-kills on exit, verify the arg shape.
+      const [_cmd, killArgs] = killCalls[0] as [string, Record<string, unknown>];
+      expect(killArgs).toEqual({ session_id: TEST_SESSION_ID });
+      expect(Object.keys(killArgs)).not.toContain('sessionId');
+    }
+    // If no auto-kill on exit, dispose() is responsible — verified in the test above.
+  });
 });

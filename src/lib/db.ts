@@ -647,6 +647,7 @@ export interface AiSession {
   created_at: number;
   last_used_at: number;
   summary: string | null;
+  title: string | null;
 }
 
 /** List sessions for a given mode, newest-first (Rust orders by `last_used_at DESC`). */
@@ -660,6 +661,10 @@ export const dbAiSessionsGet = (id: string): Promise<AiSession | null> =>
 /** Delete one session row. The on-disk cwd jail cleanup is deferred to P8. */
 export const dbAiSessionsDelete = (id: string): Promise<void> =>
   invoke<void>('db_ai_sessions_delete', { id });
+
+/** Upsert (insert-or-replace) one session row. */
+export const dbAiSessionsUpsert = (row: AiSession): Promise<void> =>
+  invoke<void>('db_ai_sessions_upsert', { row });
 
 // ---------------------------------------------------------------------------
 // MCP (W2-B) — merged-config IO + health checks.

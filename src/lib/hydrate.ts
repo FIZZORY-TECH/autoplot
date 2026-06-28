@@ -20,6 +20,7 @@
 import { useAppStore } from '../stores/useAppStore';
 import { useWatchlistStore } from '../stores/useWatchlistStore';
 import { usePortfolioStore } from '../stores/usePortfolioStore';
+import { useAiSessionStore } from '../stores/useAiSessionStore';
 import {
   useSettingsStore,
   snapshotSettings,
@@ -124,6 +125,10 @@ export async function hydrateAppState(): Promise<void> {
   // ---- Portfolio (paper-trading holdings) ----------------------------------
   const holdings = await dbPortfolioList().catch(() => []);
   usePortfolioStore.getState().setHoldings(holdings);
+
+  // ---- AI sessions ----------------------------------------------------------
+  // Hydrate independently — failures are toast-guarded inside the store.
+  void useAiSessionStore.getState().hydrate();
 
   // ---- App state keys ------------------------------------------------------
   // Independent reads from the same KV table — fan out in parallel so app

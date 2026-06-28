@@ -682,6 +682,242 @@
   max-width: 240px;
 }
 
+/* =========================================================================
+ * Terminal session tab strip — SessionTabs.tsx
+ * Folds session management INTO the Terminal header (the standalone
+ * SessionsPanel drawer is retired). The signature element is the per-tab
+ * status DOT (reusing the .session-dot / .session-stream families + the
+ * motion.css keyframes unchanged). Tabs stay quiet: hairline dividers, the
+ * ACTIVE tab marked only by a subtle accent hairline edge (no fill, no glow).
+ * All token-driven; motion is transform/opacity-only (see motion.css).
+ * ------------------------------------------------------------------------- */
+
+/* Strip — a horizontal row of tabs that scrolls on overflow, with a trailing
+   "+" new-session affordance. A hairline base separates it from the body. */
+.session-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-8) 0;
+  border-bottom: 1px solid var(--hairline);
+  min-width: 0;
+}
+.session-tabs__scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--sp-4);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Thin, unobtrusive scrollbar on overflow; the 4-session cap keeps it rare. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-2) transparent;
+}
+.session-tabs__scroll::-webkit-scrollbar { height: 3px; }
+.session-tabs__scroll::-webkit-scrollbar-track { background: transparent; }
+.session-tabs__scroll::-webkit-scrollbar-thumb {
+  background: var(--hairline-2);
+  border-radius: 2px;
+}
+
+/* One tab — a quiet pill-less cell. The dot leads; the name truncates; the
+   per-tab actions reveal on hover/focus. */
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  /* flex: 0 0 auto keeps each tab at its computed width so overflow-x:auto on
+     the scroll container scrolls the row rather than shrinking tabs to nothing. */
+  flex: 0 0 auto;
+  min-width: 110px;
+  max-width: 200px;
+  padding: var(--sp-6) var(--sp-8);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-top-left-radius: var(--r-8);
+  border-top-right-radius: var(--r-8);
+  cursor: pointer;
+  color: var(--ink-2);
+  /* Hairline divider between adjacent tabs (right edge), without a heavy frame. */
+  box-shadow: inset -1px 0 0 0 var(--hairline);
+  transition: color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease);
+}
+.session-tab:last-child { box-shadow: none; }
+.session-tab:hover { color: var(--ink-0); background: var(--tint-hover); }
+.session-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* ACTIVE tab — a subtle accent hairline edge (top), no fill bloom, no glow. */
+.session-tab--active {
+  color: var(--ink-0);
+  border-color: color-mix(in oklab, var(--accent) 42%, var(--hairline));
+  box-shadow: inset 0 2px 0 0 color-mix(in oklab, var(--accent) 70%, transparent);
+}
+.session-tab--active:hover { background: var(--tint-hover); }
+
+/* Tab label — Geist Mono short name, truncated with ellipsis (full in title).
+   Uses flex:1 1 0 so it fills the available budget and is the element that
+   shrinks+truncates — dot and action buttons are flex:0 0 auto and never clip.
+   display:flex is preserved for the optional spin icon, but the text node
+   itself is block-ified via min-width:0 + overflow:hidden on the flex item. */
+.session-tab__name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inline rename input — replaces the label IN PLACE. Mirrors .session-tab__name
+   sizing (flex:1 1 0; min-width:0; width:100%) so it fills the tab's width
+   budget rather than popping out as a fixed 11ch box. Geist Mono at the tab's
+   11px scale keeps editing visually continuous with the label it replaces.
+   The quiet cue that it's editable is a hairline underline (border-bottom),
+   not a frame — no glow, no box-shadow blur. */
+.session-tab__rename {
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline-2);
+  border-radius: 0;
+  color: var(--ink-0);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 1px 0;
+}
+/* Focus deepens the same hairline to accent — a quiet ring, no blur/glow. */
+.session-tab__rename:focus-visible {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+/* Hover-revealed per-tab actions (rename / exit / forget). Quiet at rest,
+   surface on hover or keyboard focus-within — the .lib-rm reveal idiom. */
+.session-tab__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.session-tab:hover .session-tab__actions,
+.session-tab:focus-within .session-tab__actions {
+  opacity: 1;
+}
+.session-tab__act {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              transform 150ms var(--ease);
+}
+.session-tab__act:hover { color: var(--ink-0); background: var(--glass); }
+.session-tab__act:active { transform: scale(0.92); }
+.session-tab__act:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* Forget arming confirm — reuses the .lib-rm.arming danger treatment. */
+.session-tab__act--danger.arming {
+  width: auto;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--down);
+  border: 1px solid var(--down);
+  background: color-mix(in oklab, var(--down) 14%, transparent);
+}
+
+/* "+" new-session affordance — trailing the strip, subtle accent. */
+.session-tabs__new {
+  appearance: none;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--hairline));
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-radius: var(--r-8);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease),
+              transform 150ms var(--ease);
+}
+.session-tabs__new:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 60%, var(--hairline));
+}
+.session-tabs__new:active:not(:disabled) { transform: scale(0.94); }
+.session-tabs__new:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.session-tabs__new:disabled { opacity: 0.5; cursor: default; }
+
+/* Shared status-dot families — reused by the tab strip (and previously the
+   SessionsPanel). The dot is the signature element; all motion is
+   transform/opacity-only (keyframes in motion.css), static under
+   reduced-motion. */
+.session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--ink-3);
+  /* default (IDLE) = static muted dot. */
+}
+.session-dot--idle { background: var(--ink-3); }
+/* RUNNING-quiet — accent dot, gentle breathe (opacity + scale only). */
+.session-dot--running {
+  background: var(--accent);
+  animation: session-breathe 2.1s var(--ease) infinite;
+}
+/* Spawn/New — fade the dot up muted→accent (one-shot). */
+.session-dot--enter { animation: dot-fade-up var(--t-med) var(--ease) both; }
+/* Exit/self-exit — fade the dot down accent→muted (one-shot). */
+.session-dot--exit { animation: dot-fade-down var(--t-fast) var(--ease) both; }
+
+/* RUNNING-busy — 3-dot streaming micro-indicator. Replaces the single dot
+   while the session is busy. Staggered breathe, opacity + scale only. */
+.session-stream {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+.session-stream-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: session-stream-dot 1.05s var(--ease) infinite;
+}
+.session-stream-dot:nth-child(2) { animation-delay: 0.18s; }
+.session-stream-dot:nth-child(3) { animation-delay: 0.36s; }
 
 /* =========================================================================
  * Step 8 — Legend HUD (src/chrome/LegendHUD.tsx)
@@ -1508,6 +1744,12 @@
   .lib-rm:active,
   .settings-tab:active { transform: none; }
   .lib-empty { animation: none; }
+
+  /* Session tab-strip affordances — disable scale-press; session dots/stream/
+     badge are hard-disabled in motion.css (static dots). Hover-reveal actions
+     stay opacity-only (allowed). */
+  .session-tabs__new:active,
+  .session-tab__act:active { transform: none; }
 }
 
 /* =============================================================

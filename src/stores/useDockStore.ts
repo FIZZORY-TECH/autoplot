@@ -36,6 +36,17 @@ interface DockState {
   width: Record<DrawerId, number>;
   openLeft: DrawerId | null;
   openRight: DrawerId | null;
+  /**
+   * The single source of truth for WHICH AI session the Terminal host shows.
+   * The host (TerminalPanel) renders one mounted xterm per RUNNING session
+   * (keyed by session id) and reveals only this one; the rest stay mounted but
+   * `display:none`. `null` = no session selected (host renders nothing).
+   * Owned here so the Sessions panel, the rail, and the host agree on the
+   * active session without a third store.
+   */
+  activeSessionId: string | null;
+  /** Set (or clear with `null`) the active session shown by the Terminal host. */
+  setActiveSession: (id: string | null) => void;
   toggle: (id: DrawerId) => void;
   close: (side: DockSide) => void;
   openDrawer: (id: DrawerId) => void;
@@ -119,6 +130,9 @@ export const useDockStore = create<DockState>((set, get) => {
     width: WIDTH,
     openLeft: null,
     openRight: 'terminal',
+    activeSessionId: null,
+
+    setActiveSession: (id) => set({ activeSessionId: id }),
 
     toggle: (id) =>
       set((s) => {
