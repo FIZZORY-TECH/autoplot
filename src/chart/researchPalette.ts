@@ -65,7 +65,12 @@ function toRgb(color: string): [number, number, number] | null {
   // Re-test by setting a sentinel first to distinguish a genuine black.
   ctx.clearRect(0, 0, 1, 1);
   ctx.fillRect(0, 0, 1, 1);
-  const data = ctx.getImageData(0, 0, 1, 1).data;
+  // getImageData can return null in degraded/detached contexts (e.g. the jsdom
+  // canvas stub used in unit tests). Guard before reading `.data` so that
+  // ChartCanvas doesn't crash when research overlays are present in tests.
+  const imgData = ctx.getImageData(0, 0, 1, 1);
+  if (!imgData) return null;
+  const data = imgData.data;
   if (data[3] === 0) return null;
   return [data[0], data[1], data[2]];
 }
