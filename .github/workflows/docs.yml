@@ -27,6 +27,8 @@ jobs:
             --exclude-path docs/reference
             --exclude-path src-tauri/sidecars
             --exclude-path docs/p5-smoke.md
+            --exclude '\.claude'
+            --exclude '\.serena'
           fail: true
 
   online:
@@ -55,4 +57,6 @@ jobs:
             --exclude-path docs/reference
             --exclude-path src-tauri/sidecars
             --exclude-path docs/p5-smoke.md
+            --exclude '\.claude'
+            --exclude '\.serena'
           fail: true
