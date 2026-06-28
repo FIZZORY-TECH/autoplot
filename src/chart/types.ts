@@ -109,6 +109,14 @@ export interface RenderContext {
    * renderers never reset. Absent in unit-test stubs and non-interactive draws.
    */
   hitRegions?: HitRegion[];
+  /**
+   * Which stacked pane this render pass targets (S5a). The S4 draw coordinator
+   * dispatches a layer once per pane, stamping the active pane's kind here so a
+   * pane-aware layer (e.g. GenericResearchLayer) draws only the elements that
+   * belong to that pane. ABSENT ⇒ `'price'` — the single-pane / price pass
+   * behaves byte-for-byte as before, so existing layers and tests are unaffected.
+   */
+  pane?: 'price' | 'series';
 }
 
 /** P1.3 implements this for each chart type (candles / heikin / bars / line / area / mountain). */

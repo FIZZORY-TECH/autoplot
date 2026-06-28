@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hydrateAppState, mountAppStateSync, mountSettingsSync } from './lib/hydrate';
 import ChartCanvas from './chart/ChartCanvas';
-import type { ChartType, SeriesPaneInput } from './chart/ChartCanvas';
+import type { ChartType, ResearchSubPane, SeriesPaneInput } from './chart/ChartCanvas';
 import OverlayInfoPanel from './chart/OverlayInfoPanel';
 import EventListPopover from './chart/EventListPopover';
 import type { ExpandableEvent } from './chart/EventListPopover';
@@ -100,6 +100,7 @@ import { PortfolioPanel } from './panels/PortfolioPanel';
 import { ResearchLibrary } from './panels/ResearchLibrary';
 import { useResearchOverlayLibraryStore } from './stores/useResearchOverlayLibraryStore';
 import { CHART_RESERVE_TOP, CHART_RESERVE_BOTTOM } from './lib/layout';
+import { useBarsStore } from './stores/useBarsStore';
 
 const HISTORY_BARS = 600;
 const VISIBLE_BARS = 200;
@@ -214,6 +215,11 @@ export default function AppShell() {
     window.addEventListener('resize', recompute);
     return () => window.removeEventListener('resize', recompute);
   }, []);
+  // Mirror visible bars into the shared store so sibling panels (e.g. the
+  // Indicators drawer) can read them without prop-drilling. Every setBars
+  // callsite eventually mutates `bars`, so a single [bars]-dep effect is
+  // the complete and lowest-risk seam — no individual callsite edits needed.
+  useEffect(() => { useBarsStore.getState().setBars(bars); }, [bars]);
   useEffect(() => {
     let prev = getEquityCredStatus();
     return subscribeEquityCredStatus((next) => {
@@ -684,6 +690,39 @@ export default function AppShell() {
     (window as unknown as Record<string, unknown>).__researchOverlayTest = hook;
   }, []);
 
+  // Step 8 (saved-indicators) — DEV-only Playwright hook for the saved-indicator
+  // library mirror. Seeds rows directly into useResearchOverlayLibraryStore
+  // (in-memory only; no SQLite/Tauri write) so the IndicatorPanel "Saved
+  // indicators" section can be exercised without a CLI round-trip, and exposes
+  // a peek at the chart-mutation store so the spec can assert that Apply
+  // recomputed + applied an overlay. Stripped in production bundles.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const hook = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      seed: (overlays: any[]) =>
+        useResearchOverlayLibraryStore.setState({ overlays, hydrated: true }),
+      clear: () => useResearchOverlayLibraryStore.setState({ overlays: [] }),
+      getOverlays: () => useResearchOverlayLibraryStore.getState().overlays,
+      /** The applied research overlays on the chart (post-recompute). */
+      getApplied: () => useChartMutationStore.getState().researchOverlays,
+      /** Establish a deterministic active (sym, tf) so the panel's Apply gate
+       *  (disabled when store.activeSym is undefined) is satisfied, and to
+       *  simulate the user switching symbols. provider/quote come from the
+       *  curated catalog when known. */
+      setActive: (sym: string, tf: '1h' | '4h' | '1d' | '1w') => {
+        const a = ASSETS.find((x) => x.sym.toLowerCase() === sym.toLowerCase());
+        useAppStore.getState().setActiveAsset(
+          a
+            ? { sym: a.sym, provider: a.provider, quote: a.quote }
+            : { sym, provider: 'binance', quote: 'USDT' },
+        );
+        useAppStore.getState().setTf(tf);
+      },
+    };
+    (window as unknown as Record<string, unknown>).__savedIndicatorsTest = hook;
+  }, []);
+
   // S10 — DEV-only Playwright test hooks for event-hotspot e2e guards.
   // Three capabilities exposed on window.__eventHotspotTest (guarded on DEV):
   //   openEventPopover(req) — directly opens the event-list popover (bypasses
@@ -1107,6 +1146,40 @@ export default function AppShell() {
     genericResearchOverlay(() => researchFilter(researchOverlaysRef.current)),
   );
 
+  // S5b — research SUB-PANE seam. A converted oscillator (e.g. an RSI line
+  // carrying `pane:'series'`) must render in the chart's own sub-pane on an
+  // INDEPENDENT y-scale — even with NO built-in `seriesPane` dataset present.
+  // The `overlays` prop is opaque (ChartCanvas can't see element data), so we
+  // thread the SAME research renderer + the series-pane value sources here.
+  //
+  // The series value sources mirror the price union at `overlaySources` above
+  // (same VISIBLE/non-hidden guard via `hiddenOverlayIds`) but pane-filtered to
+  // 'series' — so the price y-axis already excludes these (the price union uses
+  // the default 'price' pane) and this sub-pane gets exactly the complement.
+  // `null` when no visible overlay carries a `pane:'series'` element → no sub-pane
+  // (behavior byte-for-byte as before).
+  // NOTE: this memo MUST produce a FRESH `valueSources` array on every recompute —
+  // ChartCanvas keys its sub-pane view cache on array identity, so reusing or
+  // filtering in-place would suppress invalidation when overlays change.
+  const researchSubPane = useMemo<ResearchSubPane | null>(() => {
+    const valueSources: OverlayValueSource[] = [];
+    let title: string | undefined;
+    for (const ro of Object.values(researchOverlays)) {
+      if (hiddenOverlayIds.has(overlayKey('research', ro.id))) continue;
+      const seriesSources = researchOverlayValueSources(ro, 'series');
+      if (seriesSources.length === 0) continue;
+      valueSources.push(...seriesSources);
+      // Title chip = label of the first overlay contributing a series-pane
+      // element (single-sub-pane MVP — all series elements share one pane/scale).
+      if (title === undefined) title = ro.label;
+    }
+    if (valueSources.length === 0) return null;
+    return { renderer: researchOverlayRenderer.current, valueSources, title };
+    // `researchOverlayVersion` forces a recompute on apply/remove/prune even
+    // though the renderer reads the stable `researchOverlaysRef` (matching the
+    // `overlays` memo's dep set). `researchOverlays` covers store-object changes.
+  }, [researchOverlays, hiddenOverlayIds, researchOverlayVersion]);
+
   // P7 W5-C12 — strategy signals overlay. Cached trades come from
   // `useAppStore.aiActiveStrategyTrades` (set by Composer when a strategy
   // is applied). When null/empty, the renderer is omitted entirely. This
@@ -1455,6 +1528,7 @@ export default function AppShell() {
           onNotchClustersChange={setNotchClusters}
           activeTool={activeTool}
           seriesPane={seriesPane}
+          researchSubPane={researchSubPane}
         />
         {/* Step 6 — shared overlay info card. Subscribes to useOverlayHitStore
             for the hover hit + click signal (so the shell never re-renders on

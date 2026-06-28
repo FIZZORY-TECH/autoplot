@@ -780,6 +780,33 @@
   flex: 0 0 auto;
   text-shadow: 0 1px 2px oklch(0.11 0.008 260 / 0.8);
 }
+/* Provenance badge — inline pill for 'pine' (accent-tinted) or 'nl' / AI (violet-tinted).
+   1px hairline on --bg-2 glass chip; --font-mono ~11px; flex: 0 0 auto so it never
+   shrinks or stretches. No pointer-events change, no z-index. */
+.legend-hud-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--sp-4);
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  border: 1px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-sm);
+  letter-spacing: var(--tracking-mono-sm);
+  line-height: 1.4;
+  text-shadow: none;
+  pointer-events: none;
+}
+.legend-hud-badge--pine {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.legend-hud-badge--nl {
+  color: var(--violet);
+  border-color: color-mix(in oklab, var(--violet) 40%, transparent);
+}
+
 /* Eye + clear + collapse controls — hidden at rest, shown on row hover / focus-within.
    They stay in the layout (no display:none) so Tab can still reach them. */
 .legend-hud-eye,

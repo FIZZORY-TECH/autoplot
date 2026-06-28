@@ -54,5 +54,15 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      - name: Build sidecar binary
+        run: |
+          # Build the MCP sidecar so tauri-build's externalBin check passes
+          cargo build --manifest-path src-tauri/Cargo.toml -p autoplot-mcp
+          # Derive the host triple at runtime — avoids hardcoding linux triples
+          TRIPLE=$(rustc -vV | sed -n 's/host: //p')
+          mkdir -p src-tauri/binaries
+          cp src-tauri/target/debug/autoplot-mcp "src-tauri/binaries/autoplot-mcp-${TRIPLE}"
+          chmod +x "src-tauri/binaries/autoplot-mcp-${TRIPLE}"
+
       - name: Cargo test
         run: cargo test --manifest-path src-tauri/Cargo.toml

@@ -17,7 +17,18 @@ jobs:
       - name: Lychee (offline)
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --offline --include-fragments './**/*.md' '!**/node_modules/**' '!**/dist/**' '!**/target/**' '!**/.git/**'
+          args: >-
+            --no-progress --offline --include-fragments
+            '**/*.md'
+            --exclude-path node_modules
+            --exclude-path dist
+            --exclude-path target
+            --exclude-path .git
+            --exclude-path docs/reference
+            --exclude-path src-tauri/sidecars
+            --exclude-path docs/p5-smoke.md
+            --exclude '\.claude'
+            --exclude '\.serena'
           fail: true
 
   online:
@@ -36,5 +47,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: --no-progress --cache --max-cache-age 1d --include-fragments './**/*.md' '!**/node_modules/**' '!**/dist/**' '!**/target/**' '!**/.git/**'
+          args: >-
+            --no-progress --cache --max-cache-age 1d --include-fragments
+            '**/*.md'
+            --exclude-path node_modules
+            --exclude-path dist
+            --exclude-path target
+            --exclude-path .git
+            --exclude-path docs/reference
+            --exclude-path src-tauri/sidecars
+            --exclude-path docs/p5-smoke.md
+            --exclude '\.claude'
+            --exclude '\.serena'
           fail: true

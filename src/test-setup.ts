@@ -1,5 +1,36 @@
 import "@testing-library/jest-dom";
 
+// Node 22+ ships an experimental built-in `localStorage` that is `undefined`
+// unless launched with `--localstorage-file`. In the jsdom test environment this
+// experimental global leaks in and shadows jsdom's own Storage implementation,
+// causing `window.localStorage` to be `undefined`. Install a minimal in-memory
+// Storage on `window` so tests that read/write `localStorage` (e.g. the
+// `use-mock-provider` flag) work regardless of the Node version.
+//
+// This must run BEFORE any test module touches `window.localStorage`, which is
+// why it lives here (setupFiles runs first) rather than in the test file itself.
+if (typeof window !== "undefined" && !window.localStorage) {
+  class InMemoryStorage implements Storage {
+    private _store: Record<string, string> = {};
+    get length(): number { return Object.keys(this._store).length; }
+    key(index: number): string | null { return Object.keys(this._store)[index] ?? null; }
+    getItem(key: string): string | null { return Object.prototype.hasOwnProperty.call(this._store, key) ? this._store[key] : null; }
+    setItem(key: string, value: string): void { this._store[key] = String(value); }
+    removeItem(key: string): void { delete this._store[key]; }
+    clear(): void { this._store = {}; }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Object.defineProperty(window, "localStorage", {
+    value: new InMemoryStorage(),
+    writable: true,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Object.defineProperty(window, "sessionStorage", {
+    value: new InMemoryStorage(),
+    writable: true,
+  });
+}
+
 // jsdom doesn't implement ResizeObserver; ChartCanvas uses it for layout.
 // Provide a minimal stub so component tests can mount the canvas without
 // throwing. Real layout is exercised in Playwright (P1.4).

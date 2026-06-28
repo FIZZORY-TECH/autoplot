@@ -261,6 +261,21 @@ async function handleRequest(envelope: BridgeRequestEnvelope): Promise<void> {
           break;
         }
         useChartMutationStore.getState().applyResearchOverlay(parsed.data);
+        // Auto-save side-effect: a recipe-bearing overlay (emitted by the
+        // Pine-Script → indicator skill) also persists to the library store on
+        // apply, so the skill needs no separate `save_research_overlay` call
+        // and the user sees a single consent prompt. addOverlay upserts by id
+        // (in-memory filter + dbResearchOverlaysUpsert), so re-applying the
+        // same id replaces rather than duplicates. It swallows its own SQLite
+        // errors, but guard anyway so a persistence failure never undoes the
+        // apply that already succeeded.
+        if (parsed.data.recipe) {
+          try {
+            await useResearchOverlayLibraryStore.getState().addOverlay(parsed.data);
+          } catch (err) {
+            console.warn('[TODO P8 toast] apply_research_overlay auto-save failed', err);
+          }
+        }
         await replyOk(id, { applied: parsed.data.id });
         break;
       }

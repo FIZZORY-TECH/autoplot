@@ -15,11 +15,19 @@
  * DO NOT add keyboard listener here — P2.7 owns the `D` key shortcut.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../stores/useAppStore';
 import { useDockStore } from '../stores/useDockStore';
+import { useBarsStore } from '../stores/useBarsStore';
+import {
+  useResearchOverlayLibraryStore,
+  type PersistedResearchOverlay,
+} from '../stores/useResearchOverlayLibraryStore';
+import { useChartMutationStore } from '../stores/useChartMutationStore';
+import type { ResearchOverlay } from '../ai/schemas';
 import { parseUserSeries } from '../engine/indicators';
 import { MA20_COLOR, MA50_COLOR, BB_SWATCH_COLOR } from '../chart/overlays';
+import { recomputeRecipe } from './recomputeRecipe';
 import { DockDrawer } from './DockDrawer';
 import { PanelHeader } from './PanelHeader';
 
@@ -46,6 +54,148 @@ const INDICATOR_ITEMS = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Saved-indicator card — mirrors ResearchLibrary's OverlayCard layout (.ds-card
+// family) but its Apply RECOMPUTES the recipe for the live (sym, tf) via
+// recomputeRecipe, falling back to a verbatim re-apply for recipe-less rows.
+// Delete (.lib-rm) is two-click, mirroring OverlayCard exactly.
+// ---------------------------------------------------------------------------
+interface SavedIndicatorCardProps {
+  overlay: PersistedResearchOverlay;
+  idx: number;
+}
+
+function SavedIndicatorCard({ overlay, idx }: SavedIndicatorCardProps): JSX.Element {
+  const bars = useBarsStore((s) => s.bars);
+  const activeSym = useAppStore((s) => s.activeSym);
+  const activeTf = useAppStore((s) => s.tf);
+  const removeOverlay = useResearchOverlayLibraryStore((s) => s.removeOverlay);
+
+  const [applied, setApplied] = useState(false);
+  const appliedTimer = useRef<number | undefined>(undefined);
+
+  const [arming, setArming] = useState(false);
+  const armingTimer = useRef<number | undefined>(undefined);
+
+  // Inline "not enough history" note shown beneath .ds-meta after an Apply that
+  // returned notEnoughHistory. Cleared on the next successful Apply.
+  const [shortNote, setShortNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(appliedTimer.current);
+      window.clearTimeout(armingTimer.current);
+    };
+  }, []);
+
+  // Primary series of the recipe drives the swatch color + meta (kind · pane).
+  const primarySpec = overlay.recipe?.series[0];
+  const swatchColor =
+    primarySpec?.color ?? overlay.color ?? 'var(--accent)';
+  const meta = primarySpec
+    ? `${primarySpec.kind} · ${primarySpec.pane === 'series' ? 'sub-pane' : 'price'}`
+    : `${overlay.sym} · ${overlay.tf}`;
+
+  // Provenance badge — PINE / AI, read from overlay.source (fallback recipe.source).
+  const provenance = overlay.source ?? overlay.recipe?.source;
+
+  const barsReady = bars.length > 0;
+
+  const flashApplied = () => {
+    setApplied(true);
+    window.clearTimeout(appliedTimer.current);
+    appliedTimer.current = window.setTimeout(() => setApplied(false), 1200);
+  };
+
+  // Strip the persisted `created_at` field — recompute/apply take a clean
+  // canonical ResearchOverlay.
+  const cleanOverlay = (): ResearchOverlay => {
+    const { created_at: _created_at, ...ro } = overlay;
+    void _created_at;
+    return ro;
+  };
+
+  const handleApply = () => {
+    if (!barsReady || activeSym === undefined) return;
+    if (overlay.recipe) {
+      // Recipe present — recompute for the live (sym, tf) so the indicator is
+      // reusable across instruments rather than stretching stale values.
+      const result = recomputeRecipe(cleanOverlay(), bars, activeSym, activeTf);
+      useChartMutationStore.getState().applyResearchOverlay(result.overlay);
+      if (result.notEnoughHistory && result.note) {
+        setShortNote(result.note);
+        console.warn('[TODO P8 toast] ' + result.note);
+      } else {
+        setShortNote(null);
+      }
+    } else {
+      // Recipe-less (old/manual) rows — re-apply the frozen snapshot verbatim
+      // (Decision D: don't regress recipe-less overlays).
+      useChartMutationStore.getState().applyResearchOverlay(cleanOverlay());
+      setShortNote(null);
+    }
+    flashApplied();
+  };
+
+  const handleDelete = () => {
+    if (!arming) {
+      setArming(true);
+      window.clearTimeout(armingTimer.current);
+      armingTimer.current = window.setTimeout(() => setArming(false), 3000);
+      return;
+    }
+    window.clearTimeout(armingTimer.current);
+    setArming(false);
+    void removeOverlay(overlay.id);
+  };
+
+  return (
+    <div
+      className="ds-card"
+      style={{ ['--ds-color' as string]: swatchColor, ['--i' as string]: idx } as React.CSSProperties}
+    >
+      <span className="ds-swatch" aria-hidden />
+      <span className="ds-textcol">
+        <span className="ds-label" title={overlay.label}>
+          {overlay.label}
+        </span>
+        <span className="ds-meta">{meta}</span>
+        {shortNote !== null && (
+          <span style={{ fontSize: 10, color: 'var(--ink-4)', lineHeight: 1.4 }}>
+            {shortNote}
+          </span>
+        )}
+      </span>
+      {provenance && (
+        <span
+          className={`legend-hud-badge legend-hud-badge--${provenance === 'pine' ? 'pine' : 'nl'}`}
+          aria-hidden
+        >
+          {provenance === 'pine' ? 'PINE' : 'AI'}
+        </span>
+      )}
+      <button
+        type="button"
+        className={`ds-toggle${applied ? ' applied' : ''}`}
+        onClick={handleApply}
+        disabled={!barsReady}
+        title={barsReady ? 'Recompute for the current chart and apply' : 'Chart still loading'}
+      >
+        {applied ? '✓ applied' : 'Apply'}
+      </button>
+      <button
+        type="button"
+        className={`lib-rm${arming ? ' arming' : ''}`}
+        onClick={handleDelete}
+        aria-label={arming ? 'Confirm delete' : `Delete saved indicator ${overlay.label}`}
+        title={arming ? 'Click again to confirm delete' : 'Delete saved indicator (keeps any on-chart copy)'}
+      >
+        {arming ? 'confirm?' : '×'}
+      </button>
+    </div>
+  );
+}
+
 export function IndicatorPanel() {
   // Open-state derives from useDockStore ('indicator', right side).
   const open = useDockStore((s) => s.openRight === 'indicator');
@@ -54,6 +204,10 @@ export function IndicatorPanel() {
   const setCustomSeries = useAppStore((s) => s.setCustomSeries);
   const customSeriesEnabled = useAppStore((s) => s.customSeriesEnabled);
   const setCustomSeriesEnabled = useAppStore((s) => s.setCustomSeriesEnabled);
+
+  // Saved indicator overlays from the library mirror (same store + order as
+  // the Research Library). Newest-last (append order), matching ResearchLibrary.
+  const savedOverlays = useResearchOverlayLibraryStore((s) => s.overlays);
 
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -200,6 +354,49 @@ export function IndicatorPanel() {
             </div>
           );
         })}
+
+        {/* ---- Saved indicators section ---- */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 14,
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: 'var(--ink-3)',
+            }}
+          >
+            Saved indicators
+          </span>
+          {savedOverlays.length > 0 && (
+            <span style={{ color: 'var(--ink-4)', fontSize: 9 }}>
+              {savedOverlays.length} saved
+            </span>
+          )}
+        </div>
+
+        {savedOverlays.length === 0 ? (
+          <div className="lib-empty" role="status">
+            <div className="lib-empty-icon" aria-hidden="true">◈</div>
+            <p className="lib-empty-heading">No saved indicators yet</p>
+            <p className="lib-empty-helper">
+              Create one from the terminal — paste Pine Script or ask for an
+              indicator
+            </p>
+          </div>
+        ) : (
+          savedOverlays.map((ro, idx) => (
+            <SavedIndicatorCard key={ro.id} overlay={ro} idx={idx} />
+          ))
+        )}
 
         {/* ---- Custom series section ---- */}
         <div

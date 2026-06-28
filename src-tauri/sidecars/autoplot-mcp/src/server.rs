@@ -309,6 +309,29 @@ fn build_tool_list() -> Vec<Tool> {
                         "maxItems": 50,
                         "items": { "type": "object" },
                         "description": "Discriminated union on `type`: line | band | hline | markers | event_mark | text | hotspot. See the tool description for each element's fields and size caps."
+                    },
+                    "source": { "type": "string", "enum": ["pine", "nl"] },
+                    "recipe": {
+                        "type": "object",
+                        "description": "Indicator recipe so the overlay can be recomputed for any symbol. One series entry per logical indicator (a 'bollinger' or 'donchian' entry expands to band+mid on the frontend).",
+                        "properties": {
+                            "source": { "type": "string", "enum": ["pine", "nl"] },
+                            "series": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": { "type": "string" },
+                                        "params": { "type": "object", "additionalProperties": { "type": "number" } },
+                                        "pane": { "type": "string", "enum": ["price", "series"] },
+                                        "color": { "type": "string" },
+                                        "width": { "type": "number" }
+                                    },
+                                    "required": ["kind"]
+                                }
+                            }
+                        },
+                        "required": ["source", "series"]
                     }
                 },
                 "required": ["id", "sym", "tf", "label", "elements"]
@@ -398,7 +421,8 @@ fn build_tool_list() -> Vec<Tool> {
              distinct from the session-only remove_research_overlay, which only clears the live chart.\n\
              \n\
              Takes the same payload as apply_research_overlay: \
-             { id, sym, tf ('1h'|'4h'|'1d'|'1w'), label, color?, elements[] }. See apply_research_overlay \
+             { id, sym, tf ('1h'|'4h'|'1d'|'1w'), label, color?, elements[], source?, recipe? }. \
+             Include `recipe` to enable recompute for any symbol later. See apply_research_overlay \
              for the full `elements` discriminated union and size caps.",
             schema_to_arc(json!({
                 "type": "object",
@@ -413,6 +437,29 @@ fn build_tool_list() -> Vec<Tool> {
                         "maxItems": 50,
                         "items": { "type": "object" },
                         "description": "Discriminated union on `type`: line | band | hline | markers | event_mark | text | hotspot. See apply_research_overlay for each element's fields and size caps."
+                    },
+                    "source": { "type": "string", "enum": ["pine", "nl"] },
+                    "recipe": {
+                        "type": "object",
+                        "description": "Indicator recipe so the overlay can be recomputed for any symbol. One series entry per logical indicator (a 'bollinger' or 'donchian' entry expands to band+mid on the frontend).",
+                        "properties": {
+                            "source": { "type": "string", "enum": ["pine", "nl"] },
+                            "series": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": { "type": "string" },
+                                        "params": { "type": "object", "additionalProperties": { "type": "number" } },
+                                        "pane": { "type": "string", "enum": ["price", "series"] },
+                                        "color": { "type": "string" },
+                                        "width": { "type": "number" }
+                                    },
+                                    "required": ["kind"]
+                                }
+                            }
+                        },
+                        "required": ["source", "series"]
                     }
                 },
                 "required": ["id", "sym", "tf", "label", "elements"]
